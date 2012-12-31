@@ -1,0 +1,31 @@
+CMAKE_MINIMUM_REQUIRED( VERSION 2.6 )
+PROJECT( DEC )
+
+ADD_TEST(CompileTest ${CMAKE_CURRENT_BINARY_DIR}/CompileTest ??)
+
+SET(CMAKE_RUNTIME_OUTPUT_DIR ${PROJECT_BINARY_DIR}/bin)
+SET(CMAKE_LIBRARY_OUTPUT_DIR ${PROJECT_BINARY_DIR}/lib)
+SET(CMAKE_ARCHIVE_OUTPUT_DIR ${PROJECT_BINARY_DIR}/lib)
+
+INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/include $ENV{EIGEN_PATH})
+
+ADD_DEFINITIONS(-std=c++11)
+ADD_DEFINITIONS(-Wall)
+#ADD_DEFINITIONS(-Werror)
+
+SET(DEC_HEADERS
+    include/simplex.hpp
+    include/simplicialComplex.hpp
+    include/mesh.hpp
+    include/types.hpp
+    include/index.hpp
+    )
+
+ADD_CUSTOM_TARGET(Headers SOURCES ${DEC_HEADERS})
+
+SET (CMAKE_CXX_COMPILER             "/usr/bin/clang++")
+
+
+ENABLE_TESTING()
+ADD_SUBDIRECTORY(tests)
+
