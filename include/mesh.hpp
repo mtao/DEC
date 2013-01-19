@@ -7,14 +7,13 @@
 
 
 template <typename Scalar>
-SimplicialComplex<NumericalTraits<Scalar,3>,2> * readOBJtoSimplicialComplex(std::ifstream & infile)
+SimplicialComplex<NumericalTraits<Scalar,3>,2> * readOBJtoSimplicialComplex(std::istream & is)
 {
 
     typedef SimplicialComplex<NumericalTraits<Scalar,3>, 2> TriangleMesh;
     typedef Eigen::Matrix<Scalar,3,1> Vector3;
     std::vector<Vector3> verts;
     std::vector<mtao::IndexSet<3> > indexsets;
-    if(!infile.is_open()){return 0;}
     //temporary variables
     std::string line;
     std::string s;
@@ -26,10 +25,9 @@ SimplicialComplex<NumericalTraits<Scalar,3>,2> * readOBJtoSimplicialComplex(std:
 
     //expect lines to only be up to this long
     line.reserve(64);
-
-    while( infile.good() )
+    while( is.good() )
     {
-        getline(infile,line);
+        getline(is,line);
         if(line.length()>0)
         {
             boost::trim(line);
@@ -125,7 +123,45 @@ template <typename Scalar>
 SimplicialComplex<NumericalTraits<Scalar,3>,2> * readOBJtoSimplicialComplex(const std::string & str)
 {
     std::ifstream is(str.c_str());
+    if(!is.is_open()){return 0;}
     return readOBJtoSimplicialComplex<Scalar>(is);
 }
+
+template <typename SimplicialComplex>
+void writeOBJfromSimplicialComplex(const SimplicialComplex & sc, std::ostream & os)
+{
+    static_assert(SimplicialComplex::Dim > 0, "No point in pulling from a 0 complex...");
+    const unsigned int Dim = SimplicialComplex::NumTraits::Dim;
+
+    for(auto && v: sc.constVertices())
+    {
+        os << "v "<< v.transpose() << std::endl;
+    }
+    for(auto && s: sc.constSimplices())
+    {
+        os << "f ";
+        if(s.IsNegative()) {
+            os << s[1] << " " << s[0] << " ";
+        }
+        else
+        {
+            os << s[0] << " " << s[1] << " ";
+        }
+        for(int i=2; i < Dim; ++i)
+        {
+            os << s[i] << " ";
+        }
+        os << std::endl;
+    }
+}
+
+template <typename SimplicialComplex>
+void writeOBJfromSimplicialComplex(const SimplicialComplex & sc,const std::string & str)
+{
+    std::cout << "Writing SC to " << str << std::endl;
+    std::ofstream os(str.c_str());
+    writeOBJfromSimplicialComplex(sc,os);
+}
+
 
 #endif

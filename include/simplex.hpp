@@ -7,26 +7,12 @@
 
 
 
-template <typename NT, int Dim=NT::N>
+template <typename NT, int DIM=NT::N>
 class Simplex
 {
-    friend inline std::ostream& operator<<(std::ostream& os, const Simplex<NT,Dim> & simplex)
-    {
-        os << "(" << simplex.Index() << ": ";
-        if(simplex.IsNegative())
-        {
-            os << "-";
-        }
-        else
-        {
-            os << "+";
-        }
-
-        os << simplex.getIndexSet() << ")";
-        return os;
-    }
 public:
     typedef NT NumTraits;
+    static const int Dim = DIM;
     typedef typename NumTraits::Vector Vector;
     typedef typename NumTraits::Scalar Scalar;
     bool IsNegative( void )  const  { return (sign < 0); }
@@ -86,8 +72,26 @@ public:
     }
 
     int Get ( int i ) const {return v[i]; }
+    unsigned int operator[] (int i)const {
+        return v[i];
+    }
     unsigned int& operator[] (int i) {
         return v[i];
+    }
+    friend inline std::ostream& operator<<(std::ostream& os, const Simplex<NT,Dim> & simplex)
+    {
+        os << "(" << simplex.Index() << ": ";
+        if(simplex.IsNegative())
+        {
+            os << "-";
+        }
+        else
+        {
+            os << "+";
+        }
+
+        os << simplex.getIndexSet() << ")";
+        return os;
     }
 
 

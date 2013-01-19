@@ -19,7 +19,6 @@ int main()
     }*/
 
     TriangleMesh sc(tris,vecs);
-    auto && verts = sc.Vertices();
 
     for(auto & m: sc.Vertices())
     {
@@ -27,29 +26,30 @@ int main()
     }
    std::cout << std::endl;
 
-    std::cout << sc.Simplices<0>().size() << std::endl;
-    for(auto & m: sc.Simplices<0>())
+    std::cout << sc.simplices<0>().size() << std::endl;
+    for(auto & m: sc.simplices<0>())
     {
         std::cout << m;
     }
     std::cout << std::endl;
-    std::cout << sc.Simplices<1>().size() << std::endl;
-    for(auto & m: sc.Simplices<1>())
+    std::cout << sc.simplices<1>().size() << std::endl;
+    for(auto & m: sc.simplices<1>())
     {
         std::cout << m;
     }
     std::cout << std::endl;
-    std::cout << sc.Simplices<2>().size() << std::endl;
-    for(auto & m: sc.Simplices<2>())
+    std::cout << sc.simplices<2>().size() << std::endl;
+    for(auto & m: sc.simplices<2>())
     {
         std::cout << m;
     }
     std::cout << std::endl;
     //std::cout << sc.Simplices<3>().size() << std::endl;
 
-    std::cout << verts.size() << std::endl;
     //This file is not included!
     TriangleMesh * mesh = readOBJtoSimplicialComplex<double>("a.obj");
+    writeOBJfromSimplicialComplex(*mesh,"out.obj");
+    writeOBJfromSimplicialComplex(*mesh,std::cout);
     //std::cout << reinterpret_cast<long>(mesh) << std::endl;
     //std::cout << mesh->Simplices<2>().size() << std::endl;
     return 0;

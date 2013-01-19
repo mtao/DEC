@@ -3,7 +3,7 @@
 
 #include "simplex.hpp"
 #include <vector>
-
+#include <set>
 
 //Input N-simplices to generate the whole simplicial complex
 //Assumes that the input mesh of simplices is manifold
@@ -16,6 +16,8 @@ class SimplicialComplex: public SimplicialComplex<NT,N-1>
 {
 public:
     typedef NT NumTraits;
+    static const unsigned int Dim = N;
+    virtual unsigned int topDim() {return Dim;}
     typedef typename NumTraits::Vector Vector;
     typedef typename NumTraits::Scalar Scalar;
     typedef typename NumTraits::Triplet Triplet;
@@ -49,7 +51,7 @@ public:
         {
             m_simplices.push_back(Simplex<NumTraits, N>
                                   (
-                                      *(reinterpret_cast<mtao::IndexSet<N+1> *>(&tuples[i]))
+                                      reinterpret_cast<mtao::IndexSet<N+1> >(&tuples[i])
                                       )
                                   );
 
@@ -59,8 +61,14 @@ public:
 
         init();
     }
-    template <int M>
-    const std::vector<Simplex<NumTraits, M> > & Simplices() const
+    template <int M=Dim>
+    const std::vector<Simplex<NumTraits, M> > & constSimplices() const
+    {
+        static_assert( M <= N, "Tried to access a set of simplices of a dimension too high");
+        return SimplicialComplex<NT,M>::m_simplices;
+    }
+    template <int M=Dim>
+    std::vector<Simplex<NumTraits, M> > & simplices()
     {
         static_assert( M <= N, "Tried to access a set of simplices of a dimension too high");
         return SimplicialComplex<NT,M>::m_simplices;
@@ -78,17 +86,18 @@ private:
     typedef SimplicialComplex<NT,N-1> SCm1;
     std::vector<Triplet > m_boundaryTriplets;
     SparseMatrixColMajor m_boundary;//Rows are n-1 simplices cols are n simplices
+    std::set<NSimplex> m_simplexSet;
 
 };
 
-
-
-//A 0-simplicial complex only manages
+//A 0-simplicial complex that mainly serves as a base case for the above definition
 template <typename NT>
 class SimplicialComplex<NT,0>
 {
 public:
     typedef NT NumTraits;
+    static const unsigned int Dim = 0;
+    virtual unsigned int topDim() {return Dim;}
     typedef typename NumTraits::Vector Vector;
     typedef typename NumTraits::Scalar Scalar;
     typedef typename NumTraits::Triplet Triplet;
@@ -107,36 +116,40 @@ public:
         m_vertices=vertices;
     }
     const std::vector<Vector> & Vertices(){return m_vertices;}
+    const std::vector<Vector> & constVertices()const{return m_vertices;}
+    std::vector<Vector> & vertices(){return m_vertices;}
 
 protected:
     void init() {}
     void finalize()
-    {}
+    {
+        m_simplices.resize(m_simplexSet.size());
+        std::copy(m_simplexSet.begin(), m_simplexSet.end(), m_simplices.begin());
+    }
     int add(NSimplex & simplex)
     {
-        for(auto it=m_simplices.begin();
-            it!= m_simplices.end();++it)
-
+        simplex.setIndex(-1);
+        typename std::set<NSimplex>::const_iterator it = m_simplexSet.find(simplex);
+        if(it == m_simplexSet.end())
         {
-            if(*it==simplex)
-            {
-                simplex.setIndex(it->Index());
-                break;
-            }
+            simplex.setIndex(m_simplexSet.size());
+            //m_simplices.push_back(simplex);
+            m_simplexSet.insert(simplex);
+            return simplex.Index();
         }
-        if(simplex.Index()==-1)
+        else
         {
-            simplex.setIndex(m_simplices.size());
-            m_simplices.push_back(simplex);
-
+            return it->Index();
         }
-        return simplex.Index();
     }
 protected:
     std::vector<NSimplex > m_simplices;
     std::vector<Vector> m_vertices;
+    std::set<NSimplex> m_simplexSet;
 
 };
+
+
 
 //Check whether this simplex already exists
 //if it does exist set the index so the owner of the simplex knows where it belongs
@@ -145,24 +158,19 @@ template <typename NT,int N>
 int SimplicialComplex<NT,N>::add(NSimplex & simplex)
 {
     simplex.setIndex(-1);
-    for(auto it=m_simplices.begin();
-        it!= m_simplices.end();++it)
-
+    typename std::set<NSimplex>::const_iterator it = m_simplexSet.find(simplex);
+    if(it == m_simplexSet.end())
     {
-        if(*it==simplex)
-        {
-            simplex.setIndex(it->Index());
-            break;
-        }
-    }
-    if(simplex.Index()==-1)
-    {
-        simplex.setIndex(m_simplices.size());
-        m_simplices.push_back(simplex);
+        simplex.setIndex(m_simplexSet.size());
+        //m_simplices.push_back(simplex);
         createBoundary(simplex);
-
+        m_simplexSet.insert(simplex);
+        return simplex.Index();
     }
-    return simplex.Index();
+    else
+    {
+        return it->Index();
+    }
 
 
 }
@@ -198,7 +206,6 @@ int SimplicialComplex<NT,N>::createBoundary(NSimplex& simplex)
 template <typename NT, int N>
 void SimplicialComplex<NT,N>::init()
 {
-    std::vector<Triplet > tripList;
     int index=0;
     std::sort(m_simplices.begin(), m_simplices.end());
     //std::unique leaves the iterator at the end to do erase to the end
@@ -220,10 +227,16 @@ void SimplicialComplex<NT,N>::init()
 template <typename NT, int N>
 void SimplicialComplex<NT,N>::finalize()
 {
+    SCm1::finalize();
+    if(N < topDim())
+    {
+    m_simplices.resize(m_simplexSet.size());
+    std::copy(m_simplexSet.begin(), m_simplexSet.end(), m_simplices.begin());
+    }
+    m_simplexSet.clear();
     m_boundary.resize(SCm1::m_simplices.size(), m_simplices.size());
     m_boundary.setFromTriplets(m_boundaryTriplets.begin(), m_boundaryTriplets.end());
-    //std::cout << m_boundary;
-    SCm1::finalize();
+    //std::cout << m_boundary << std::endl;
 }
 
 

@@ -67,12 +67,16 @@ public:
         for( unsigned int i = 0; i < N; ++i )
         {
             if( this->Get(i) < other.Get(i) )
+            {
                 return true;
+            }
             else if( this->Get(i) > other.Get(i) )
+            {
                 return false;
+            }
         }
 
-        return (this->Get(N) < other.Get(N));
+        return false;
     }
 
     inline bool operator>( const IndexSet<N,Index>& other ) const
