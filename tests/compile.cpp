@@ -1,6 +1,7 @@
 #include <iostream>
 #include "simplicialComplex.hpp"
 #include "mesh.hpp"
+#include "dec.hpp"
 int main()
 {
     typedef Eigen::Vector3d V;
@@ -20,7 +21,7 @@ int main()
 
     TriangleMesh sc(tris,vecs);
 
-    for(auto & m: sc.Vertices())
+    for(auto & m: sc.vertices())
     {
         std::cout << m.transpose()<< " | ";
     }
@@ -52,5 +53,7 @@ int main()
     writeOBJfromSimplicialComplex(*mesh,std::cout);
     //std::cout << reinterpret_cast<long>(mesh) << std::endl;
     //std::cout << mesh->Simplices<2>().size() << std::endl;
+    Form<TriangleMesh, PRIMAL, 1> one(*mesh);
+    std::cout << one.transpose().squaredNorm() << std::endl;
     return 0;
 }

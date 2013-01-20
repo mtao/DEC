@@ -17,7 +17,7 @@ class SimplicialComplex: public SimplicialComplex<NT,N-1>
 public:
     typedef NT NumTraits;
     static const unsigned int Dim = N;
-    virtual unsigned int topDim() {return Dim;}
+    virtual unsigned int topDim() const{return Dim;}
     typedef typename NumTraits::Vector Vector;
     typedef typename NumTraits::Scalar Scalar;
     typedef typename NumTraits::Triplet Triplet;
@@ -73,6 +73,8 @@ public:
         static_assert( M <= N, "Tried to access a set of simplices of a dimension too high");
         return SimplicialComplex<NT,M>::m_simplices;
     }
+    template <int M=Dim>
+    size_t numSimplices()const{return SimplicialComplex<NT,M>::m_simplices.size();}
     //Builds the n-1 simplices and n <-> n-1 simplices relationships
     void init();
     int add(NSimplex & simplex);
@@ -90,14 +92,14 @@ private:
 
 };
 
-//A 0-simplicial complex that mainly serves as a base case for the above definition
+//A 0-simplicial complex only manages
 template <typename NT>
 class SimplicialComplex<NT,0>
 {
 public:
     typedef NT NumTraits;
     static const unsigned int Dim = 0;
-    virtual unsigned int topDim() {return Dim;}
+    virtual unsigned int topDim() const {return Dim;}
     typedef typename NumTraits::Vector Vector;
     typedef typename NumTraits::Scalar Scalar;
     typedef typename NumTraits::Triplet Triplet;
@@ -115,9 +117,8 @@ public:
         m_simplices = simplices;
         m_vertices=vertices;
     }
-    const std::vector<Vector> & Vertices(){return m_vertices;}
-    const std::vector<Vector> & constVertices()const{return m_vertices;}
     std::vector<Vector> & vertices(){return m_vertices;}
+    const std::vector<Vector> & constVertices()const{return m_vertices;}
 
 protected:
     void init() {}

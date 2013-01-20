@@ -19,6 +19,7 @@ SET(DEC_HEADERS
     include/mesh.hpp
     include/types.hpp
     include/index.hpp
+    include/dec.hpp
     )
 
 ADD_CUSTOM_TARGET(Headers SOURCES ${DEC_HEADERS})
