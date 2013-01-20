@@ -25,7 +25,7 @@ int main()
     {
         std::cout << m.transpose()<< " | ";
     }
-   std::cout << std::endl;
+    std::cout << std::endl;
 
     std::cout << sc.simplices<0>().size() << std::endl;
     for(auto & m: sc.simplices<0>())
@@ -50,10 +50,15 @@ int main()
     //This file is not included!
     TriangleMesh * mesh = readOBJtoSimplicialComplex<double>("a.obj");
     writeOBJfromSimplicialComplex(*mesh,"out.obj");
-    writeOBJfromSimplicialComplex(*mesh,std::cout);
+    //writeOBJfromSimplicialComplex(*mesh,std::cout);
     //std::cout << reinterpret_cast<long>(mesh) << std::endl;
     //std::cout << mesh->Simplices<2>().size() << std::endl;
     Form<TriangleMesh, PRIMAL, 1> one(*mesh);
+    DEC<TriangleMesh> dec(sc);
+    std::cout << dec.template d<0>() << std::endl;
+    std::cout << dec.template d<1>() << std::endl;
+    std::cout << (dec.template d<1>() * dec.template d<0>()) << std::endl;
+    std::cout << (dec.template d<1>() * dec.template d<0>()).norm() << std::endl;
     std::cout << one.transpose().squaredNorm() << std::endl;
     return 0;
 }

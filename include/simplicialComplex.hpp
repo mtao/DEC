@@ -16,8 +16,8 @@ class SimplicialComplex: public SimplicialComplex<NT,N-1>
 {
 public:
     typedef NT NumTraits;
-    static const unsigned int Dim = N;
-    virtual unsigned int topDim() const{return Dim;}
+    static const int Dim = N;
+    virtual int topDim() const{return Dim;}
     typedef typename NumTraits::Vector Vector;
     typedef typename NumTraits::Scalar Scalar;
     typedef typename NumTraits::Triplet Triplet;
@@ -62,6 +62,8 @@ public:
         init();
     }
     template <int M=Dim>
+    const SparseMatrix & b() const{return SimplicialComplex<NT,M>::m_boundary;}
+    template <int M=Dim>
     const std::vector<Simplex<NumTraits, M> > & constSimplices() const
     {
         static_assert( M <= N, "Tried to access a set of simplices of a dimension too high");
@@ -84,7 +86,7 @@ public:
 protected:
     std::vector<NSimplex > m_simplices;
     void finalize();
-private:
+protected:
     typedef SimplicialComplex<NT,N-1> SCm1;
     std::vector<Triplet > m_boundaryTriplets;
     SparseMatrixColMajor m_boundary;//Rows are n-1 simplices cols are n simplices
@@ -98,8 +100,8 @@ class SimplicialComplex<NT,0>
 {
 public:
     typedef NT NumTraits;
-    static const unsigned int Dim = 0;
-    virtual unsigned int topDim() const {return Dim;}
+    static const int Dim = 0;
+    virtual int topDim() const {return Dim;}
     typedef typename NumTraits::Vector Vector;
     typedef typename NumTraits::Scalar Scalar;
     typedef typename NumTraits::Triplet Triplet;
@@ -192,14 +194,20 @@ int SimplicialComplex<NT,N>::createBoundary(NSimplex& simplex)
         Simplex<NumTraits,N-1> target(index);
         //add the simplex created by add
 
+        if(N != 1) {
         m_boundaryTriplets.push_back(Triplet(
                                          SimplicialComplex<NT,N-1>::add(target),
                                          simplex.Index(),
                                          simplex.isSameSign(target)?1:-1));
-        //std::cout << N << ": "
-        //          << Simplices<N-1>()[m_boundaryTriplets.back().row()] << " "
-        //          << Simplices<N>()[m_boundaryTriplets.back().col()] << " " << std::endl;
-
+        }
+        else
+        {
+        m_boundaryTriplets.push_back(Triplet(
+                                         SimplicialComplex<NT,N-1>::add(target),
+                                         simplex.Index(),
+                                         //(simplex.isSameSign(target)==(i==1))?1:-1));
+                                         (i==1)?1:-1));
+        }
 
     }
     return 0;

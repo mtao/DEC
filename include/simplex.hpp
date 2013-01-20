@@ -6,11 +6,14 @@
 
 
 
+template <typename NT, int N>
+class SimplicialComplex;
 
 template <typename NT, int DIM=NT::N>
 class Simplex
 {
 public:
+    friend class SimplicialComplex<NT,DIM>;
     typedef NT NumTraits;
     static const int Dim = DIM;
     typedef typename NumTraits::Vector Vector;

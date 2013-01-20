@@ -1,6 +1,8 @@
 #ifndef TYPES_UTIL_H
 #define TYPES_UTIL_H
 
+//This is to make sure that forms dont change size by accident
+#define EIGEN_NO_AUTOMATIC_RESIZING
 #include <Eigen/Sparse>
 #include "index.hpp"
 typedef unsigned int uint;
