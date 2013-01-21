@@ -11,13 +11,21 @@
 //NumTraits::N identifies the dimension of the space
 //N determines the maximal simplex dimension
 
+namespace mtao
+{
+constexpr int cefactorial(int n)
+{
+    return n > 0 ? n * cefactorial(n-1):1;
+}
+};
 template <typename NT, int N>
 class SimplicialComplex: public SimplicialComplex<NT,N-1>
 {
 public:
     typedef NT NumTraits;
     static const int Dim = N;
-    virtual int topDim() const{return Dim;}
+    virtual int TopDim() const { return Dim; }
+    static const int EmbeddedDim = NT::Dim;
     typedef typename NumTraits::Vector Vector;
     typedef typename NumTraits::Scalar Scalar;
     typedef typename NumTraits::Triplet Triplet;
@@ -77,11 +85,68 @@ public:
     }
     template <int M=Dim>
     size_t numSimplices()const{return SimplicialComplex<NT,M>::m_simplices.size();}
+
     //Builds the n-1 simplices and n <-> n-1 simplices relationships
     void init();
     int add(NSimplex & simplex);
     int createBoundary(NSimplex & simplex);
-    //const std::vector<NSimplex> & Simplices() const {return m_simplices;}
+
+    Eigen::Matrix<Scalar,EmbeddedDim,N> simplexToBaryMatrix(const mtao::IndexSet<N+1> & s)
+    {
+        Eigen::Matrix<Scalar,EmbeddedDim,N> m;
+        auto&& origin = this->m_vertices[s[N]];
+        for(int i=0; i < N; ++i)
+        {
+            m.col(i) = this->m_vertices[s[i]] - origin;
+        }
+        return m;
+    }
+    Eigen::Matrix<Scalar,EmbeddedDim,N> simplexToBaryMatrix(NSimplex & s)
+    {
+        return simplexToBaryMatrix(s.getIndexSet());
+    }
+    template <bool Signed = (N == EmbeddedDim)>
+    Scalar computeVolume(const mtao::IndexSet<N+1> & s)
+    {
+        auto&& m = simplexToBaryMatrix(s);
+        if(Signed)
+        {
+            return m.determinant()/mtao::cefactorial(N);
+        }
+        else
+        {
+            return std::sqrt((m.transpose()*m).determinant())/mtao::cefactorial(N);
+        }
+    }
+
+    template <bool Signed = (N == EmbeddedDim)>
+    void computeVolume(NSimplex & s)
+    {
+        s.volume = computeVolume(s.getIndexSet());
+    }
+
+    void computeCircumcenter(NSimplex & s)
+    {
+        //2<V,C> + r = sum(V.array()^2,by col).transpose()
+        //switch to homo coords => bottomw ones and right ones, zero bottom left
+        auto&& m = simplexToBaryMatrix(s);
+        Eigen::Matrix<Scalar,N+1,N+1> A = Eigen::Matrix<Scalar,N+1,N+1>::Ones();
+
+        A.topLeftCorner(N,N) = 2*(m.transpose()*m).eval();
+        A.coeffRef(N,N) = 0;
+        Eigen::Matrix<Scalar,N+1,1> b = Eigen::Matrix<Scalar,N+1,1>::Ones();
+        b.topRows(N) = m.array().square().colwise().sum().transpose();
+        A.ldlt().solveInPlace(b);
+        s.center = this->m_vertices[s[N]] + m*b.topRows(N);
+
+    }
+
+    /*
+    void computeDualVolume(NSimplex & s, mtao::IndexSet<EmbeddedDim> & ind)
+    {
+
+    }
+    */
 
 protected:
     std::vector<NSimplex > m_simplices;
@@ -101,7 +166,7 @@ class SimplicialComplex<NT,0>
 public:
     typedef NT NumTraits;
     static const int Dim = 0;
-    virtual int topDim() const {return Dim;}
+    static const int EmbeddedDim = NT::Dim;
     typedef typename NumTraits::Vector Vector;
     typedef typename NumTraits::Scalar Scalar;
     typedef typename NumTraits::Triplet Triplet;
@@ -128,6 +193,11 @@ protected:
     {
         m_simplices.resize(m_simplexSet.size());
         std::copy(m_simplexSet.begin(), m_simplexSet.end(), m_simplices.begin());
+        for(auto&& s: m_simplices)
+        {
+            computeVolume(s);
+            computeCircumcenter(s);
+        }
     }
     int add(NSimplex & simplex)
     {
@@ -144,6 +214,14 @@ protected:
         {
             return it->Index();
         }
+    }
+    void computeVolume(NSimplex & s)
+    {
+        s.volume = 1;
+    }
+    void computeCircumcenter(NSimplex & s)
+    {
+        s.center = m_vertices[s.Index()];
     }
 protected:
     std::vector<NSimplex > m_simplices;
@@ -195,18 +273,18 @@ int SimplicialComplex<NT,N>::createBoundary(NSimplex& simplex)
         //add the simplex created by add
 
         if(N != 1) {
-        m_boundaryTriplets.push_back(Triplet(
-                                         SimplicialComplex<NT,N-1>::add(target),
-                                         simplex.Index(),
-                                         simplex.isSameSign(target)?1:-1));
+            m_boundaryTriplets.push_back(Triplet(
+                                             SimplicialComplex<NT,N-1>::add(target),
+                                             simplex.Index(),
+                                             simplex.isSameSign(target)?1:-1));
         }
         else
         {
-        m_boundaryTriplets.push_back(Triplet(
-                                         SimplicialComplex<NT,N-1>::add(target),
-                                         simplex.Index(),
-                                         //(simplex.isSameSign(target)==(i==1))?1:-1));
-                                         (i==1)?1:-1));
+            m_boundaryTriplets.push_back(Triplet(
+                                             SimplicialComplex<NT,N-1>::add(target),
+                                             simplex.Index(),
+                                             //(simplex.isSameSign(target)==(i==1))?1:-1));
+                                             (i==1)?1:-1));
         }
 
     }
@@ -236,18 +314,26 @@ void SimplicialComplex<NT,N>::init()
 template <typename NT, int N>
 void SimplicialComplex<NT,N>::finalize()
 {
-    SCm1::finalize();
-    if(N < topDim())
+
+    SCm1::finalize();//need to finalize before boundary, which depends on the smaller pieces
+
+    if(N < TopDim())
     {
-    m_simplices.resize(m_simplexSet.size());
-    std::copy(m_simplexSet.begin(), m_simplexSet.end(), m_simplices.begin());
+        m_simplices.resize(m_simplexSet.size());
+        std::copy(m_simplexSet.begin(), m_simplexSet.end(), m_simplices.begin());
     }
     m_simplexSet.clear();
+
+    for(auto&& s: m_simplices)
+    {
+        computeVolume(s);
+        computeCircumcenter(s);
+    }
+
+    //TODO: compute dual volumes by tracking circumcenters downward
     m_boundary.resize(SCm1::m_simplices.size(), m_simplices.size());
     m_boundary.setFromTriplets(m_boundaryTriplets.begin(), m_boundaryTriplets.end());
-    //std::cout << m_boundary << std::endl;
 }
-
 
 
 typedef SimplicialComplex<NumericalTraits<double, 3>, 2> TriangleMesh;

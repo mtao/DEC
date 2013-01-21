@@ -11,6 +11,10 @@ int main()
     {
         vecs.push_back(V(i,i,i));
     }
+    vecs[0] = V(0,0,0);
+    vecs[3] = V(1,1,0);
+    vecs[5] = V(1,0,0);
+    vecs[5] = V(0,1,0);
     tris.push_back(mtao::IndexSet<3>({0,3,5}));
     tris.push_back(mtao::IndexSet<3>({3,0,6}));
     /*
@@ -48,17 +52,19 @@ int main()
     //std::cout << sc.Simplices<3>().size() << std::endl;
 
     //This file is not included!
+    /*
     TriangleMesh * mesh = readOBJtoSimplicialComplex<double>("a.obj");
     writeOBJfromSimplicialComplex(*mesh,"out.obj");
+    */
     //writeOBJfromSimplicialComplex(*mesh,std::cout);
     //std::cout << reinterpret_cast<long>(mesh) << std::endl;
     //std::cout << mesh->Simplices<2>().size() << std::endl;
-    Form<TriangleMesh, PRIMAL, 1> one(*mesh);
+    //Form<TriangleMesh, PRIMAL, 1> one(*mesh);
     DEC<TriangleMesh> dec(sc);
     std::cout << dec.template d<0>() << std::endl;
     std::cout << dec.template d<1>() << std::endl;
     std::cout << (dec.template d<1>() * dec.template d<0>()) << std::endl;
     std::cout << (dec.template d<1>() * dec.template d<0>()).norm() << std::endl;
-    std::cout << one.transpose().squaredNorm() << std::endl;
+    //std::cout << one.transpose().squaredNorm() << std::endl;
     return 0;
 }

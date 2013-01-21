@@ -2,8 +2,10 @@
 #define TYPES_UTIL_H
 
 //This is to make sure that forms dont change size by accident
-#define EIGEN_NO_AUTOMATIC_RESIZING
+//#define EIGEN_NO_AUTOMATIC_RESIZING
+#include <Eigen/Dense>
 #include <Eigen/Sparse>
+#include <Eigen/LU>
 #include "index.hpp"
 typedef unsigned int uint;
 
@@ -32,6 +34,7 @@ struct NumericalTraits
     //Assume that I'm dealing with square matrices or dynamic matrices
     typedef Eigen::Matrix<T,DIM,DIM> Matrix;
     typedef Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> DynamicMatrix;
+    typedef Eigen::DiagonalMatrix<T,Eigen::Dynamic> DiagonalMatrix;
     typedef Eigen::SparseMatrix<T> SparseMatrix;
     typedef Eigen::SparseMatrix<T, Eigen::RowMajor> SparseMatrixRowMajor;
     typedef Eigen::SparseMatrix<T, Eigen::ColMajor> SparseMatrixColMajor;

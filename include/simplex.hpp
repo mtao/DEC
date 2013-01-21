@@ -92,6 +92,7 @@ public:
         {
             os << "+";
         }
+        os << simplex.Volume();
 
         os << simplex.getIndexSet() << ")";
         return os;
