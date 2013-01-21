@@ -128,7 +128,7 @@ SimplicialComplex<NumericalTraits<Scalar,3>,2> * readOBJtoSimplicialComplex(cons
 }
 
 template <typename SimplicialComplex>
-void writeOBJfromSimplicialComplex(const SimplicialComplex & sc, std::ostream & os)
+void writeSimplicialComplextoStream(const SimplicialComplex & sc, std::ostream & os)
 {
     static_assert(SimplicialComplex::Dim > 0, "No point in pulling from a 0 complex...");
     const unsigned int Dim = SimplicialComplex::NumTraits::Dim;
@@ -160,7 +160,7 @@ void writeOBJfromSimplicialComplex(const SimplicialComplex & sc,const std::strin
 {
     std::cout << "Writing SC to " << str << std::endl;
     std::ofstream os(str.c_str());
-    writeOBJfromSimplicialComplex(sc,os);
+    writeSimplicialComplextoStream(sc,os);
 }
 
 

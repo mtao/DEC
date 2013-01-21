@@ -16,7 +16,7 @@ ADD_DEFINITIONS(-Wall)
 SET(DEC_HEADERS
     include/simplex.hpp
     include/simplicialComplex.hpp
-    include/mesh.hpp
+    include/io.hpp
     include/types.hpp
     include/index.hpp
     include/dec.hpp

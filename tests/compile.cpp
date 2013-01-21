@@ -1,6 +1,6 @@
 #include <iostream>
 #include "simplicialComplex.hpp"
-#include "mesh.hpp"
+#include "io.hpp"
 #include "dec.hpp"
 int main()
 {
@@ -14,17 +14,11 @@ int main()
     vecs[0] = V(0,0,0);
     vecs[3] = V(1,1,0);
     vecs[5] = V(1,0,0);
-    vecs[5] = V(0,1,0);
+    vecs[6] = V(0,1,0);
     tris.push_back(mtao::IndexSet<3>({0,3,5}));
     tris.push_back(mtao::IndexSet<3>({3,0,6}));
-    /*
-    for(unsigned int i=0; i < 8; ++i)
-    {
-        tris.push_back(mtao::IndexSet<3>({i,i+1,i+2}));
-    }*/
 
     TriangleMesh sc(tris,vecs);
-
     for(auto & m: sc.vertices())
     {
         std::cout << m.transpose()<< " | ";
@@ -49,17 +43,15 @@ int main()
         std::cout << m;
     }
     std::cout << std::endl;
-    //std::cout << sc.Simplices<3>().size() << std::endl;
+    writeSimplicialComplextoStream(sc,std::cout);
+    std::cout << "Interior calcs: " << std::endl;
 
-    //This file is not included!
-    /*
-    TriangleMesh * mesh = readOBJtoSimplicialComplex<double>("a.obj");
-    writeOBJfromSimplicialComplex(*mesh,"out.obj");
-    */
-    //writeOBJfromSimplicialComplex(*mesh,std::cout);
-    //std::cout << reinterpret_cast<long>(mesh) << std::endl;
-    //std::cout << mesh->Simplices<2>().size() << std::endl;
-    //Form<TriangleMesh, PRIMAL, 1> one(*mesh);
+    std::cout << sc.template interior<2>().diagonal().transpose() << std::endl;
+    std::cout << sc.template interior<1>().diagonal().transpose() << std::endl;
+    std::cout << sc.template interior<0>().diagonal().transpose() << std::endl;
+
+
+    std::cout << "DEC operators" << std::endl;
     DEC<TriangleMesh> dec(sc);
     std::cout << dec.template d<0>() << std::endl;
     std::cout << dec.template d<1>() << std::endl;

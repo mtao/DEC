@@ -30,6 +30,7 @@ public:
     typedef typename NumTraits::Scalar Scalar;
     typedef typename NumTraits::Triplet Triplet;
     typedef typename NumTraits::SparseMatrix SparseMatrix;
+    typedef typename NumTraits::DiagonalMatrix DiagonalMatrix;
     typedef typename NumTraits::SparseMatrixColMajor SparseMatrixColMajor;
     typedef  Simplex<NumTraits, N> NSimplex;
     SimplicialComplex() {}
@@ -44,7 +45,11 @@ public:
     {
         SimplicialComplex<NT,0>::m_vertices=vertices;
         m_simplices.resize(tuples.size());
-        std::copy(tuples.begin(), tuples.end(), m_simplices.begin());
+        std::transform(tuples.begin(), tuples.end(), m_simplices.begin(),
+                [](const mtao::IndexSet<N+1> & is) -> NSimplex
+                {
+                return NSimplex(is);
+                });
 
         init();
     }
@@ -86,6 +91,10 @@ public:
     template <int M=Dim>
     size_t numSimplices()const{return SimplicialComplex<NT,M>::m_simplices.size();}
 
+    template <int M=Dim>
+    const DiagonalMatrix & interior() const 
+    {return SimplicialComplex<NT,M>::m_interior;}
+protected:
     //Builds the n-1 simplices and n <-> n-1 simplices relationships
     void init();
     int add(NSimplex & simplex);
@@ -172,6 +181,16 @@ public:
 
     }
     */
+    void setInterior(int index)
+    {
+        m_interior.diagonal()(index)=0;
+        for(typename decltype(m_boundary)::InnerIterator it(m_boundary,index);it;++it)
+        {
+            //if it hasn't been set already
+            if(SCm1::m_interior.diagonal()(it.row()) == 1)
+                SCm1::setInterior(it.row());
+        }
+    }
 
 protected:
     std::vector<NSimplex > m_simplices;
@@ -180,6 +199,7 @@ protected:
     typedef SimplicialComplex<NT,N-1> SCm1;
     std::vector<Triplet > m_boundaryTriplets;
     SparseMatrixColMajor m_boundary;//Rows are n-1 simplices cols are n simplices
+    DiagonalMatrix m_interior;
     std::set<NSimplex> m_simplexSet;
 
 
@@ -197,6 +217,7 @@ public:
     typedef typename NumTraits::Vector Vector;
     typedef typename NumTraits::Scalar Scalar;
     typedef typename NumTraits::Triplet Triplet;
+    typedef typename NumTraits::DiagonalMatrix DiagonalMatrix;
     typedef Simplex<NumTraits,0> NSimplex;
 
 
@@ -213,12 +234,17 @@ public:
     }
     std::vector<Vector> & vertices(){return m_vertices;}
     const std::vector<Vector> & constVertices()const{return m_vertices;}
+    template <int M=0>
+    const DiagonalMatrix & interior() const 
+    {return SimplicialComplex<NT,M>::m_interior;}
 
 protected:
     void init() {}
     void finalize()
     {
         m_simplices.resize(m_simplexSet.size());
+        m_interior.resize(m_simplexSet.size());
+        m_interior.setIdentity();
         std::copy(m_simplexSet.begin(), m_simplexSet.end(), m_simplices.begin());
         for(auto&& s: m_simplices)
         {
@@ -263,9 +289,14 @@ protected:
         }
         s.dualVolume += std::sqrt((m.transpose()*m).determinant())/mtao::cefactorial(0);
     }
+    void setInterior(int index)
+    {
+        m_interior.diagonal()(index)=0;
+    }
 
 protected:
     std::vector<NSimplex > m_simplices;
+    DiagonalMatrix m_interior;
     std::vector<Vector> m_vertices;
     std::set<NSimplex> m_simplexSet;
 
@@ -357,6 +388,22 @@ void SimplicialComplex<NT,N>::init()
     {
             genDualVolume(s, clist);
     }
+    //Extraneous computation to let the DEC side zero things out easier
+    SparseMatrixColMajor B = m_boundary.transpose();//make it so the innervectors are the top simplices
+    m_interior.resize(m_simplices.size());
+    m_interior.setIdentity();
+    for(int i = 0; i < B.outerSize(); ++i)
+    {
+        if(B.innerVector(i).nonZeros() == 1)
+        {
+            SCm1::setInterior(i);
+            m_interior.diagonal()(
+                    typename decltype(B)::InnerIterator(B,i).row()
+                    )=0;
+
+
+        }
+    }
 
 }
 
@@ -379,8 +426,13 @@ void SimplicialComplex<NT,N>::finalize()
         computeCircumcenter(s);
     }
 
+
+
     m_boundary.resize(SCm1::m_simplices.size(), m_simplices.size());
     m_boundary.setFromTriplets(m_boundaryTriplets.begin(), m_boundaryTriplets.end());
+    m_interior.resize(m_simplices.size());
+    m_interior.setIdentity();
+    
 
 
 }
