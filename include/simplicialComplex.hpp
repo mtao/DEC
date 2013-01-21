@@ -141,6 +141,31 @@ public:
 
     }
 
+
+    void genDualVolume(NSimplex & s, std::vector<Vector> & clist)
+    {
+        clist[N] = s.center;
+
+        if(N == clist.size()-1)
+            s.dualVolume = 1;
+        else
+        {
+            int M = EmbeddedDim;
+            typename NumTraits::DynamicMatrix m(M,clist.size()-N-1);
+            auto&& origin = clist.back();
+            for(int i=N; i < clist.size()-1; ++i)
+            {
+                m.col(i-N) = this->m_vertices[i] - origin;
+            }
+            s.dualVolume += std::sqrt((m.transpose()*m).determinant())/mtao::cefactorial(N);
+        }
+        for(typename decltype(m_boundary)::InnerIterator it(m_boundary, s.Index()); it; ++it)
+        {
+            SCm1::genDualVolume(simplices<N-1>()[it.row()], clist);
+        }
+    }
+
+
     /*
     void computeDualVolume(NSimplex & s, mtao::IndexSet<EmbeddedDim> & ind)
     {
@@ -156,6 +181,8 @@ protected:
     std::vector<Triplet > m_boundaryTriplets;
     SparseMatrixColMajor m_boundary;//Rows are n-1 simplices cols are n simplices
     std::set<NSimplex> m_simplexSet;
+
+
 
 };
 
@@ -223,6 +250,20 @@ protected:
     {
         s.center = m_vertices[s.Index()];
     }
+
+    void genDualVolume(NSimplex & s, std::vector<Vector> & clist)
+    {
+        clist[0] = s.center;
+        int M = EmbeddedDim;
+        typename NumTraits::DynamicMatrix m(M,clist.size()-1);
+        auto&& origin = clist.back();
+        for(int i=0; i < clist.size()-1; ++i)
+        {
+            m.col(i) = this->m_vertices[i] - origin;
+        }
+        s.dualVolume += std::sqrt((m.transpose()*m).determinant())/mtao::cefactorial(0);
+    }
+
 protected:
     std::vector<NSimplex > m_simplices;
     std::vector<Vector> m_vertices;
@@ -308,6 +349,14 @@ void SimplicialComplex<NT,N>::init()
     }
 
     finalize();
+    //This depends on having the boundary structure, but should be run
+    //top down and only once due to the maintenance of circumcenter list
+    //so it doesn't fit in head-recursive finalize
+    std::vector<Vector> clist(N+1,Vector::Zero());
+    for(auto&& s: m_simplices)
+    {
+            genDualVolume(s, clist);
+    }
 
 }
 
@@ -330,9 +379,10 @@ void SimplicialComplex<NT,N>::finalize()
         computeCircumcenter(s);
     }
 
-    //TODO: compute dual volumes by tracking circumcenters downward
     m_boundary.resize(SCm1::m_simplices.size(), m_simplices.size());
     m_boundary.setFromTriplets(m_boundaryTriplets.begin(), m_boundaryTriplets.end());
+
+
 }
 
 

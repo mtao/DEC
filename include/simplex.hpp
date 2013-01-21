@@ -92,7 +92,7 @@ public:
         {
             os << "+";
         }
-        os << simplex.Volume();
+        os << "{" <<simplex.Volume() << ","<< simplex.DualVolume()<<"}";
 
         os << simplex.getIndexSet() << ")";
         return os;
