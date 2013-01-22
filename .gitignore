@@ -11,3 +11,12 @@
 *.lai
 *.la
 *.a
+
+#qtcreator user file
+*.user
+
+#Temporary files
+*~
+
+#Build directories
+build*
