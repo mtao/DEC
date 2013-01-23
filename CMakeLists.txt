@@ -20,6 +20,7 @@ SET(DEC_HEADERS
     include/types.hpp
     include/index.hpp
     include/dec.hpp
+    include/dec_overloads.hpp
     )
 
 ADD_CUSTOM_TARGET(Headers SOURCES ${DEC_HEADERS})
