@@ -8,13 +8,13 @@ class DECTest: public DEC<TriangleMesh>
     public:
     DECTest(const SimplicialComplex & sc): DEC<TriangleMesh>(sc)
     {
-        std::cout << d<1>();
-    Form<SimplicialComplex,PRIMAL,1> form = genForm<PRIMAL,1>();
-    auto form2 = genForm<PRIMAL,1>();
-    form2.setOnes();
-    static_cast<typename NumTraits::DynamicVector>(form) = form2 + form2;
-    std::cout << form.transpose() << std::endl;
-    std::cout << form2.transpose() << std::endl;
+        std::cout << d<1>().constData() << std::endl;
+    Form<typename SimplicialComplex::NumTraits::DynamicVector,PRIMAL_FORM,1> form = genForm<PRIMAL_FORM,1>();
+    auto form2 = genForm<PRIMAL_FORM,1>();
+    form2.data().setOnes();
+    form = form2 + form2;
+    std::cout << form.constData().transpose() << std::endl;
+    std::cout << form2.constData().transpose() << std::endl;
     }
 
 };

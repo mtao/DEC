@@ -53,10 +53,12 @@ int main()
 
     std::cout << "DEC operators" << std::endl;
     DEC<TriangleMesh> dec(sc);
-    std::cout << dec.template d<0>() << std::endl;
-    std::cout << dec.template d<1>() << std::endl;
+    std::cout << dec.template d<0>().constData() << std::endl;
+    std::cout << dec.template d<1>().constData() << std::endl;
+    /*
     std::cout << (dec.template d<1>() * dec.template d<0>()) << std::endl;
     std::cout << (dec.template d<1>() * dec.template d<0>()).norm() << std::endl;
+    */
     //std::cout << one.transpose().squaredNorm() << std::endl;
     return 0;
 }

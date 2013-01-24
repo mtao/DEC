@@ -4,7 +4,7 @@
 #include <utility>
 #include <assert.h>
 #include <type_traits>
-enum FormType {PRIMAL, DUAL};
+enum FormType {PRIMAL_FORM, DUAL_FORM, BOTH_FORM};
 
 template <FormType TypeIn_, int NIn_, FormType TypeOut_, int NOut_, typename Expression>
 struct FormExpression
@@ -13,50 +13,34 @@ struct FormExpression
     const static FormType TypeOut = TypeOut_;
     const static int NIn = NIn_;
     const static int NOut = NOut_;
-    FormExpression(const & Expression exp): expr(exp) {}
+    FormExpression(const Expression & exp): expr(exp) {}
 
     const Expression & expr;
 
 };
 
 
-template <typename SimplicialComplex,FormType Type1, int N1>
+template <typename DynamicVector,FormType Type1, int N1>
 //Type1 doesn't do anything
-class Form: public FormExpression<Type1,-1,Type1,N1, typename SimplicialComplex::NumTraits::DynamicVector>
+class Form: public FormExpression<Type1,-1,Type1,N1, DynamicVector>
 {
 private:
-    typedef Form<SimplicialComplex,Type1,N1> MyType;
+    typedef Form<DynamicVector,Type1,N1> MyType;
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
     static const int N = N1;
     static const FormType Type = Type1;
-    typedef typename SimplicialComplex::NumTraits NumTraits;
-    typedef typename NumTraits::Scalar Scalar;
-    typedef FormExpression<Type,-1,Type,N,typename SimplicialComplex::NumTraits::DynamicVector> Parent;
-    typedef typename NumTraits::DynamicVector DynamicVector;
+    typedef FormExpression<Type,-1,Type,N,DynamicVector> Parent;
     //typedef typename Parent::ExpressionType ExpressionType;
-    Form(int size=0): Parent(m_data), m_data(size) {}
-    Form(const SimplicialComplex & sc)
-        : m_data(
-          (Type == PRIMAL) ?  sc.template numSimplices<N>() : sc.template numSimplices <SimplicialComplex::Dim-N>()
-              )
-    {
-        static_assert(N <= SimplicialComplex::Dim,"Form can't be of higher dim than top dim of simplicial complex");
-        m_data.setConstant(Scalar(0));
-    }
-    Form(const typename SimplicialComplex::NumTraits::DynamicVector & other): Parent(m_data)
+    Form(int size=0): Parent(m_data), m_data(size) {m_data.setConstant(typename DynamicVector::Scalar(0));}
+    Form(const DynamicVector & other): Parent(m_data)
     {
         assert(m_data.size() == other.size());
         m_data = other;
     }
     Form(const MyType & other): Parent(m_data), m_data(other.constData()) {}
-    void init(const SimplicialComplex & sc)
-    {
-        resize((Type == PRIMAL) ?  sc.template numSimplices<N>() :sc.template numSimplices<SimplicialComplex::Dim-N>()
-              );
-        m_data.setConstant(Scalar(0));
-
-    }
+    template <typename Expr>
+    Form(const Expr & other): Parent(m_data), m_data(other) {}
     template <FormType TypeIn, int NIn, FormType TypeOut, int NOut, typename Expr2>
         MyType & operator=(const FormExpression<TypeIn,NIn,TypeOut,NOut,Expr2> & rhs)
         {
@@ -65,6 +49,7 @@ public:
                     (TypeOut == Type) &&
                     (NOut == N)
                     , "Equality can't combine different forms");
+            std::cout << m_data.transpose() << std::endl;
             m_data = rhs.expr;
             return *this;
         }
@@ -76,22 +61,22 @@ private:
 
 
 
-template <typename SimplicialComplex, FormType TypeIn_, int NIn_, FormType TypeOut_, int NOut_, typename MatrixType>
+template <FormType TypeIn_, int NIn_, FormType TypeOut_, int NOut_, typename MatrixType>
 class FormOperator: public FormExpression<TypeIn_,NIn_,TypeOut_,NOut_, MatrixType>
 {
 private:
-    typedef FormMap<FormType TypeIn, NIn, TypeOut,NOut> MyType;
+    typedef FormOperator<TypeIn_, NIn_, TypeOut_,NOut_,MatrixType> MyType;
     public:
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
-        typedef Expression ExpressionType;
         static const int NIn = NIn_;
         static const FormType TypeIn = TypeIn_;
         static const int NOut = NOut_;
         static const FormType TypeOut = TypeOut_;
-        template <typename SimplicialComplex>
-            FormExpression(const Form<SimplicialComplex,Type,N> & form) m_expr(form.data()) {}
         typedef  FormExpression<TypeIn_,NIn_,TypeOut_,NOut_, MatrixType> Parent;
-        FormExpression(): Parent(m_data) {}
+    template <typename Expr>
+    FormOperator(const Expr & other): Parent(m_data), m_data(other) {}
+    FormOperator(const MyType & other): Parent(m_data), m_data(other.constData()) {}
+        FormOperator(): Parent(m_data) {}
     template <FormType _TypeIn, int _NIn, FormType _TypeOut, int _NOut, typename Expr2>
         MyType & operator=(const FormExpression<TypeIn,NIn,TypeOut,NOut,Expr2> & rhs)
         {
@@ -117,14 +102,16 @@ class FormFactory{
         FormFactory(const SimplicialComplex & sc): m_sc(sc) {}
 
         template <FormType Type, int N>
-            Form<SimplicialComplex,Type,N> genForm()
+            Form<typename SimplicialComplex::NumTraits::DynamicVector,Type,N> genForm()
             {
-                return Form<SimplicialComplex,Type,N>(m_sc);
+        static_assert(N <= SimplicialComplex::Dim,"Form can't be of higher dim than top dim of simplicial complex");
+                return Form<typename SimplicialComplex::NumTraits::DynamicVector,Type,N>(
+          (Type == PRIMAL_FORM) ?  m_sc.template numSimplices<N>() : m_sc.template numSimplices <SimplicialComplex::Dim-N>()
+              );
             }
 
     private:
         const SimplicialComplex & m_sc;
-        DynamicVector m_data;
 };
 
 
@@ -149,14 +136,14 @@ class HiddenOperatorContainer: public HiddenOperatorContainer<SC,TmD-1>
     {
         for(auto&& s: sc.template constSimplices<D>())
         {
-            m_hodge.diagonal()(s.Index()) = s.DualVolume() / s.Volume();
+            m_hodge.data().diagonal()(s.Index()) = s.DualVolume() / s.Volume();
         }
 
     }
 
 protected://Data
-    SparseMatrixColMajor m_d;
-    DiagonalMatrix m_hodge;
+    FormOperator<BOTH_FORM,D,BOTH_FORM,D+1,SparseMatrixColMajor> m_d;
+    FormOperator<PRIMAL_FORM,D,DUAL_FORM,TmD, DiagonalMatrix> m_hodge;
 };
 
 template <typename SC>
@@ -198,15 +185,15 @@ public:
 
 
     template <int N>
-    const SparseMatrixColMajor & d()const
+    const FormOperator<BOTH_FORM,N,BOTH_FORM,N+1,SparseMatrixColMajor> & d()const
     {
         return HiddenOperatorContainer<SC,Dim-N>::m_d;
     }
 
-    template <int N, FormType Form = PRIMAL>
-    const DiagonalMatrix & h()const
+    template <int N, FormType Form = PRIMAL_FORM>
+    const FormOperator<BOTH_FORM,N,BOTH_FORM,Dim-N,DiagonalMatrix> & h()const
     {
-        if(Form == PRIMAL)
+        if(Form == PRIMAL_FORM)
         {
             return HiddenOperatorContainer<SC,Dim-N>::m_hodge;
         }
@@ -227,7 +214,7 @@ public:
     -> FormExpression<Type,N+1,decltype(d<N>()*f)>
     {
         typedef FormExpression<
-                DUAL, N+1,
+                DUAL_FORM, N+1,
                 decltype(d<N>()*f)
                 > ResultExprType;
         //should map Primal,N to Dual,Dim-N
@@ -243,11 +230,11 @@ public:
     */
     /*
     template <int N, typename Expression>
-    auto h(const FormExpression<PRIMAL,N,Expression> & f) const
-    -> FormExpression<DUAL,Dim-N,decltype(h<N>()*f)>
+    auto h(const FormExpression<PRIMAL_FORM,N,Expression> & f) const
+    -> FormExpression<DUAL_FORM,Dim-N,decltype(h<N>()*f)>
     {
         typedef FormExpression<
-                DUAL, Dim-N,
+                DUAL_FORM, Dim-N,
                 decltype(h<N>()*f)
                 > ResultExprType;
         //should map Primal,N to Dual,Dim-N
@@ -255,11 +242,11 @@ public:
         return ResultExprType(h<N>() * f);
     }
     template <int N, typename Expression>
-    auto h(const FormExpression<DUAL,N,Expression> & f) const
-    -> FormExpression<PRIMAL,Dim-N,decltype(((N*(Dim-N)%2==0)?1:-1)*h<N>().inverse() * f)>
+    auto h(const FormExpression<DUAL_FORM,N,Expression> & f) const
+    -> FormExpression<PRIMAL_FORM,Dim-N,decltype(((N*(Dim-N)%2==0)?1:-1)*h<N>().inverse() * f)>
     {
         typedef FormExpression<
-                PRIMAL,Dim-N,
+                PRIMAL_FORM,Dim-N,
                 decltype(
                     ((N*(Dim-N)%2==0)?1:-1)*h<N>().inverse() * f
                     )
@@ -272,13 +259,13 @@ public:
     */
     /*
         template <int N>
-            const Form<SC,DUAL,Dim-N> h(const Form<SC,PRIMAL,N> & f)const
+            const Form<SC,DUAL_FORM,Dim-N> h(const Form<SC,PRIMAL_FORM,N> & f)const
             {
                 return h<N>() * f;
             }
 
         template <int N>
-            const Form<SC,PRIMAL,N> h(const Form<SC,DUAL,Dim-N> & f)const
+            const Form<SC,PRIMAL_FORM,N> h(const Form<SC,DUAL_FORM,Dim-N> & f)const
             {
                 //enforce inverse hodge keeeps  *^{-1}* = -1^{k*n-k}
                 return ((N*(Dim-N)%2==0)?1:-1)*h<N>().inverse() * f;
