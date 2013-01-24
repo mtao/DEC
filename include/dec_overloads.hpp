@@ -4,20 +4,75 @@
 #include "dec.hpp"
 #endif
 
-template <FormType Type1,int N1,typename Expr1, FormType Type2, int N2, typename Expr2>
-auto operator+(const FormExpression<Type1,N1,Expr1> & a, const FormExpression<Type2,N2,Expr2> & b)
-->
-FormExpression<Type1, N1,
-decltype(
-        std::declval<Expr1>()+std::declval<Expr2>()
-        )>
+    template <FormType TypeIn, int NIn,FormType TypeOut, int NOut,typename Expr1, typename Expr2>
+auto operator+(const FormExpression<TypeIn,NIn,TypeOut,NOut,Expr1> & a, const FormExpression<TypeIn,NIn,TypeOut,NOut,Expr2> & b)
+    ->
+    FormExpression<TypeIn, NIn, TypeOut, NOut,
+    decltype(
+            std::declval<Expr1>()+std::declval<Expr2>()
+            )>
 {
-    static_assert(Type1 == Type2, "Addition can't combine different forms");
-    static_assert(N1 == N2, "Addition can't combine different forms");
     return
-            (static_cast<Expr1>(a)+static_cast<Expr2>(b));
+        FormExpression<TypeIn, NIn, TypeOut, NOut,
+        decltype(
+                std::declval<Expr1>()+std::declval<Expr2>()
+                )> (a.expr+b.expr);
 }
 
+    template <FormType TypeIn, int NIn,FormType TypeOut, int NOut,typename Expr1, typename Expr2>
+auto operator-(const FormExpression<TypeIn,NIn,TypeOut,NOut,Expr1> & a, const FormExpression<TypeIn,NIn,TypeOut,NOut,Expr2> & b)
+    ->
+    FormExpression<TypeIn, NIn, TypeOut, NOut,
+    decltype(
+            std::declval<Expr1>()-std::declval<Expr2>()
+            )>
+{
+    return
+        FormExpression<TypeIn, NIn, TypeOut, NOut,
+        decltype(
+                std::declval<Expr1>()-std::declval<Expr2>()
+                )> (a.expr+b.expr);
+}
 
+    template <FormType TypeIn, int NIn,FormType TypeMid,int NMid, FormType TypeOut, int NOut,typename Expr1, typename Expr2>
+auto operator*(const FormExpression<TypeMid,NMid,TypeOut,NOut,Expr1> & a, const FormExpression<TypeIn,NIn,TypeMid,NMid,Expr2> & b)
+    ->
+    FormExpression<TypeIn, NIn, TypeOut, NOut,
+    decltype(
+            std::declval<Expr1>()+std::declval<Expr2>()
+            )>
+{
+    return FormExpression<TypeIn, NIn, TypeOut, NOut,
+           decltype(
+                   std::declval<Expr1>()+std::declval<Expr2>()
+                   )> (a.expr*b.expr);
+}
+
+    template <FormType TypeIn, int NIn,FormType TypeOut, int NOut,typename Expr>
+auto operator*(std::enable_if<std::is_scalar<Scalar>,Scalar>::type a, const FormExpression<TypeIn,NIn,TypeOut,NOut,Expr> & b)
+    ->
+    FormExpression<TypeIn, NIn, TypeOut, NOut,
+    decltype(
+            std::declval<Scalar>()+std::declval<Expr>()
+            )>
+{
+    return FormExpression<TypeIn, NIn, TypeOut, NOut,
+           decltype(
+                   std::declval<Scalar>()+std::declval<Expr2>()
+                   )> (a*b.expr);
+}
+    template <FormType TypeIn, int NIn,FormType TypeOut, int NOut,typename Expr>
+auto operator*(const FormExpression<TypeIn,NIn,TypeOut,NOut,Expr> & a, std::enable_if<std::is_scalar<Scalar>,Scalar>::type b)
+    ->
+    FormExpression<TypeIn, NIn, TypeOut, NOut,
+    decltype(
+            std::declval<Scalar>()+std::declval<Expr>()
+            )>
+{
+    return FormExpression<TypeIn, NIn, TypeOut, NOut,
+           decltype(
+                   std::declval<Scalar>()+std::declval<Expr2>()
+                   )> (a*b.expr);
+}
 
 #endif

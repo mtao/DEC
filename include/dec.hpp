@@ -6,11 +6,23 @@
 #include <type_traits>
 enum FormType {PRIMAL, DUAL};
 
+template <FormType TypeIn_, int NIn_, FormType TypeOut_, int NOut_, typename Expression>
+struct FormExpression
+{
+    const static FormType TypeIn = TypeIn_;//Typein = -1 means that this should resolve to a vector
+    const static FormType TypeOut = TypeOut_;
+    const static int NIn = NIn_;
+    const static int NOut = NOut_;
+    FormExpression(const & Expression exp): expr(exp) {}
+
+    const Expression & expr;
+
+};
 
 
 template <typename SimplicialComplex,FormType Type1, int N1>
-class Form//: public SimplicialComplex::NumTraits::DynamicVector
-//class Form: public FormExpression<Type1,N1, typename SimplicialComplex::NumTraits::DynamicVector>
+//Type1 doesn't do anything
+class Form: public FormExpression<Type1,-1,Type1,N1, typename SimplicialComplex::NumTraits::DynamicVector>
 {
 private:
     typedef Form<SimplicialComplex,Type1,N1> MyType;
@@ -20,81 +32,99 @@ public:
     static const FormType Type = Type1;
     typedef typename SimplicialComplex::NumTraits NumTraits;
     typedef typename NumTraits::Scalar Scalar;
-    //typedef FormExpression<Type,N,typename SimplicialComplex::NumTraits::DynamicVector> Parent;
-        typedef typename NumTraits::DynamicVector DynamicVector;
+    typedef FormExpression<Type,-1,Type,N,typename SimplicialComplex::NumTraits::DynamicVector> Parent;
+    typedef typename NumTraits::DynamicVector DynamicVector;
     //typedef typename Parent::ExpressionType ExpressionType;
-    Form(): m_data(0) {}
+    Form(int size=0): Parent(m_data), m_data(size) {}
     Form(const SimplicialComplex & sc)
-        : m_data(//static_cast<const Parent>(
-                     //typename Parent::ExpressionType(
-                         (Type == PRIMAL) ?  sc.template numSimplices<N>() : sc.template numSimplices <SimplicialComplex::Dim-N>()
-                                             )
-                     //)
-                 //)
+        : m_data(
+          (Type == PRIMAL) ?  sc.template numSimplices<N>() : sc.template numSimplices <SimplicialComplex::Dim-N>()
+              )
     {
         static_assert(N <= SimplicialComplex::Dim,"Form can't be of higher dim than top dim of simplicial complex");
         m_data.setConstant(Scalar(0));
     }
-    Form(const typename SimplicialComplex::NumTraits::DynamicVector & other)
+    Form(const typename SimplicialComplex::NumTraits::DynamicVector & other): Parent(m_data)
     {
         assert(m_data.size() == other.size());
         m_data = other;
     }
-    Form(const MyType & other): Parent(static_cast<const Parent>(other)) {}
+    Form(const MyType & other): Parent(m_data), m_data(other.constData()) {}
     void init(const SimplicialComplex & sc)
     {
         resize((Type == PRIMAL) ?  sc.template numSimplices<N>() :sc.template numSimplices<SimplicialComplex::Dim-N>()
-                                   );
+              );
         m_data.setConstant(Scalar(0));
 
     }
-    template <FormType Type2, int N2, typename Expr2>
-    MyType & operator=(const FormExpression<Type2,N2,Expr2> & rhs)
-    {
-        static_assert(Type == Type2, "Equality can't combine different forms");
-        static_assert(N == N2, "Equality can't combine different forms");
-        m_data = rhs.expr;
-        return *this;
-    }
+    template <FormType TypeIn, int NIn, FormType TypeOut, int NOut, typename Expr2>
+        MyType & operator=(const FormExpression<TypeIn,NIn,TypeOut,NOut,Expr2> & rhs)
+        {
+            static_assert(
+                    (NIn== -1) &&
+                    (TypeOut == Type) &&
+                    (NOut == N)
+                    , "Equality can't combine different forms");
+            m_data = rhs.expr;
+            return *this;
+        }
+    DynamicVector & data(){return m_data;}
+    const DynamicVector & constData() const {return m_data;}
+private:
+    DynamicVector m_data;
 };
 
-template <FormType TypeIn, int NIn, FormType TypeOut, int NOut, typename Expression>
-struct FormMap//: public Expression
+
+
+template <typename SimplicialComplex, FormType TypeIn_, int NIn_, FormType TypeOut_, int NOut_, typename MatrixType>
+class FormOperator: public FormExpression<TypeIn_,NIn_,TypeOut_,NOut_, MatrixType>
 {
+private:
+    typedef FormMap<FormType TypeIn, NIn, TypeOut,NOut> MyType;
     public:
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
-    typedef Expression ExpressionType;
-    static const int NIn = NIn;
-    static const FormType TypeIn = TypeIn;
-    static const int NOut = NOut;
-    static const FormType TypeOut = TypeOut;
-    template <typename SimplicialComplex>
-    FormExpression(const Form<SimplicialComplex,Type,N> & form) m_expr(form.data()) {}
-    FormExpression(const Expression & expr): m_expr(expr) {}
-    const ExpressionType & expr(){return m_expr;}
-    /*
-    FormExpression(const Expression & other): Expression(other) {}
-    FormExpression(const FormExpression & other): Expression(static_cast<const Expression>(other)) {}
-    */
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+        typedef Expression ExpressionType;
+        static const int NIn = NIn_;
+        static const FormType TypeIn = TypeIn_;
+        static const int NOut = NOut_;
+        static const FormType TypeOut = TypeOut_;
+        template <typename SimplicialComplex>
+            FormExpression(const Form<SimplicialComplex,Type,N> & form) m_expr(form.data()) {}
+        typedef  FormExpression<TypeIn_,NIn_,TypeOut_,NOut_, MatrixType> Parent;
+        FormExpression(): Parent(m_data) {}
+    template <FormType _TypeIn, int _NIn, FormType _TypeOut, int _NOut, typename Expr2>
+        MyType & operator=(const FormExpression<TypeIn,NIn,TypeOut,NOut,Expr2> & rhs)
+        {
+            static_assert(
+                    (TypeIn == _TypeIn) &&
+                    (NIn==_NIn) &&
+                    (TypeOut == _TypeOut) &&
+                    (NOut == _NOut)
+                    , "Equality can't combine different forms");
+            m_data = rhs.expr;
+            return *this;
+        }
+    MatrixType & data(){return m_data;}
+    const MatrixType & constData() const {return m_data;}
     private:
-    const Expression & m_expr;
+        MatrixType m_data;
 
 };
 
 template <typename SimplicialComplex>
 class FormFactory{
-protected:
-    FormFactory(const SimplicialComplex & sc): m_sc(sc) {}
+    protected:
+        FormFactory(const SimplicialComplex & sc): m_sc(sc) {}
 
-    template <FormType Type, int N>
-    Form<SimplicialComplex,Type,N> genForm()
-    {
-        return Form<SimplicialComplex,Type,N>(m_sc);
-    }
+        template <FormType Type, int N>
+            Form<SimplicialComplex,Type,N> genForm()
+            {
+                return Form<SimplicialComplex,Type,N>(m_sc);
+            }
 
-private:
-    const SimplicialComplex & m_sc;
-    DynamicVector m_data;
+    private:
+        const SimplicialComplex & m_sc;
+        DynamicVector m_data;
 };
 
 
@@ -105,17 +135,17 @@ template <typename SC, int TmD>
 class HiddenOperatorContainer: public HiddenOperatorContainer<SC,TmD-1>
 {
 
-protected:
-    const static int TopD = SC::Dim;
-    const static int D = TopD-TmD;
-    typedef typename SC::NumTraits NumTraits;
-    typedef typename NumTraits::SparseMatrixColMajor SparseMatrixColMajor;
-    typedef typename NumTraits::DiagonalMatrix DiagonalMatrix;
-    typedef HiddenOperatorContainer<SC,TmD-1> Parent;
-    HiddenOperatorContainer(const SC & sc)
-        : Parent(sc)
-        , m_d(sc.template b<D+1>().transpose())
-        , m_hodge(sc.template numSimplices<D>())
+    protected:
+        const static int TopD = SC::Dim;
+        const static int D = TopD-TmD;
+        typedef typename SC::NumTraits NumTraits;
+        typedef typename NumTraits::SparseMatrixColMajor SparseMatrixColMajor;
+        typedef typename NumTraits::DiagonalMatrix DiagonalMatrix;
+        typedef HiddenOperatorContainer<SC,TmD-1> Parent;
+        HiddenOperatorContainer(const SC & sc)
+            : Parent(sc)
+              , m_d(sc.template b<D+1>().transpose())
+              , m_hodge(sc.template numSimplices<D>())
     {
         for(auto&& s: sc.template constSimplices<D>())
         {
