@@ -3,20 +3,31 @@
 #ifndef DEC_H
 #include "dec.hpp"
 #endif
+#include <typeinfo>
 
     template <FormType TypeIn, int NIn,FormType TypeOut, int NOut,typename Expr1, typename Expr2>
 auto operator+(const FormExpression<TypeIn,NIn,TypeOut,NOut,Expr1> & a, const FormExpression<TypeIn,NIn,TypeOut,NOut,Expr2> & b)
     ->
-    FormExpression<TypeIn, NIn, TypeOut, NOut,
+    const FormExpression<TypeIn, NIn, TypeOut, NOut,
     decltype(
             std::declval<Expr1>()+std::declval<Expr2>()
             )>
 {
+    std::cout << "Operator+ " << std::endl;
+    std::cout << "lhs: " << a.expr.rows() << " " << a.expr.cols() << std::endl;
+    std::cout << "rhs: " << b.expr.rows() << " " << b.expr.cols() << std::endl;
+    auto expr = a.expr+b.expr;
+    std::cout << "expr: " << expr.rows() << " " << expr.cols() << std::endl;
     return
         FormExpression<TypeIn, NIn, TypeOut, NOut,
         decltype(
                 std::declval<Expr1>()+std::declval<Expr2>()
+                )> (expr);
+    /*
+        decltype(
+                std::declval<Expr1>()+std::declval<Expr2>()
                 )> (a.expr+b.expr);
+                */
 }
 
     template <FormType TypeIn, int NIn,FormType TypeOut, int NOut,typename Expr1, typename Expr2>

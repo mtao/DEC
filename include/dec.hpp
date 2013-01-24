@@ -15,6 +15,7 @@ struct FormExpression
     const static int NOut = NOut_;
     FormExpression(const Expression & exp): expr(exp) {}
 
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
     const Expression & expr;
 
 };
@@ -42,16 +43,16 @@ public:
     template <typename Expr>
     Form(const Expr & other): Parent(m_data), m_data(other) {}
     template <FormType TypeIn, int NIn, FormType TypeOut, int NOut, typename Expr2>
-        MyType & operator=(const FormExpression<TypeIn,NIn,TypeOut,NOut,Expr2> & rhs)
+        Form(const FormExpression<TypeIn,NIn,TypeOut,NOut,Expr2> & rhs): Parent(m_data), m_data(rhs.expr)
         {
             static_assert(
                     (NIn== -1) &&
                     (TypeOut == Type) &&
                     (NOut == N)
                     , "Equality can't combine different forms");
-            std::cout << m_data.transpose() << std::endl;
-            m_data = rhs.expr;
-            return *this;
+            std::cout << rhs.expr.rows() << " " << rhs.expr.cols() << std::endl;
+            std::cout << m_data.rows() << " " << m_data.cols() << std::endl;
+            std::cout << "Data: " << m_data.transpose() << std::endl;
         }
     DynamicVector & data(){return m_data;}
     const DynamicVector & constData() const {return m_data;}
@@ -78,7 +79,7 @@ private:
     FormOperator(const MyType & other): Parent(m_data), m_data(other.constData()) {}
         FormOperator(): Parent(m_data) {}
     template <FormType _TypeIn, int _NIn, FormType _TypeOut, int _NOut, typename Expr2>
-        MyType & operator=(const FormExpression<TypeIn,NIn,TypeOut,NOut,Expr2> & rhs)
+        FormOperator(const FormExpression<TypeIn,NIn,TypeOut,NOut,Expr2> & rhs): Parent(m_data)
         {
             static_assert(
                     (TypeIn == _TypeIn) &&
@@ -87,7 +88,6 @@ private:
                     (NOut == _NOut)
                     , "Equality can't combine different forms");
             m_data = rhs.expr;
-            return *this;
         }
     MatrixType & data(){return m_data;}
     const MatrixType & constData() const {return m_data;}
