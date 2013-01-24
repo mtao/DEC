@@ -6,26 +6,10 @@
 #include <type_traits>
 enum FormType {PRIMAL, DUAL};
 
-template <FormType Type1, int N1, typename Expression>
-struct FormExpression//: public Expression
-{
-    public:
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
-    typedef Expression ExpressionType;
-    static const int N = N1;
-    static const FormType Type = Type1;
-    /*
-    FormExpression(const Expression & other): Expression(other) {}
-    FormExpression(const FormExpression & other): Expression(static_cast<const Expression>(other)) {}
-    */
-    private:
-    const Expression & expr;
-
-};
 
 
 template <typename SimplicialComplex,FormType Type1, int N1>
-class Form: public SimplicialComplex::NumTraits::DynamicVector
+class Form//: public SimplicialComplex::NumTraits::DynamicVector
 //class Form: public FormExpression<Type1,N1, typename SimplicialComplex::NumTraits::DynamicVector>
 {
 private:
@@ -37,11 +21,11 @@ public:
     typedef typename SimplicialComplex::NumTraits NumTraits;
     typedef typename NumTraits::Scalar Scalar;
     //typedef FormExpression<Type,N,typename SimplicialComplex::NumTraits::DynamicVector> Parent;
-        typedef typename NumTraits::DynamicVector Parent;
+        typedef typename NumTraits::DynamicVector DynamicVector;
     //typedef typename Parent::ExpressionType ExpressionType;
-    Form(): Parent(0) {}
+    Form(): m_data(0) {}
     Form(const SimplicialComplex & sc)
-        : Parent(//static_cast<const Parent>(
+        : m_data(//static_cast<const Parent>(
                      //typename Parent::ExpressionType(
                          (Type == PRIMAL) ?  sc.template numSimplices<N>() : sc.template numSimplices <SimplicialComplex::Dim-N>()
                                              )
@@ -49,19 +33,19 @@ public:
                  //)
     {
         static_assert(N <= SimplicialComplex::Dim,"Form can't be of higher dim than top dim of simplicial complex");
-        this->setConstant(Scalar(0));
+        m_data.setConstant(Scalar(0));
     }
     Form(const typename SimplicialComplex::NumTraits::DynamicVector & other)
     {
-        assert(this->size() == other.size());
-        dynamic_cast<MyType >(*this) = other;
+        assert(m_data.size() == other.size());
+        m_data = other;
     }
     Form(const MyType & other): Parent(static_cast<const Parent>(other)) {}
     void init(const SimplicialComplex & sc)
     {
         resize((Type == PRIMAL) ?  sc.template numSimplices<N>() :sc.template numSimplices<SimplicialComplex::Dim-N>()
                                    );
-        setConstant(Scalar(0));
+        m_data.setConstant(Scalar(0));
 
     }
     template <FormType Type2, int N2, typename Expr2>
@@ -69,11 +53,32 @@ public:
     {
         static_assert(Type == Type2, "Equality can't combine different forms");
         static_assert(N == N2, "Equality can't combine different forms");
-        std::cout << this << std::endl;
-        std::cout << this->transpose() << std::endl;
-        static_cast<typename Parent::ExpressionType>(*this) = rhs.expr;
+        m_data = rhs.expr;
         return *this;
     }
+};
+
+template <FormType TypeIn, int NIn, FormType TypeOut, int NOut, typename Expression>
+struct FormMap//: public Expression
+{
+    public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+    typedef Expression ExpressionType;
+    static const int NIn = NIn;
+    static const FormType TypeIn = TypeIn;
+    static const int NOut = NOut;
+    static const FormType TypeOut = TypeOut;
+    template <typename SimplicialComplex>
+    FormExpression(const Form<SimplicialComplex,Type,N> & form) m_expr(form.data()) {}
+    FormExpression(const Expression & expr): m_expr(expr) {}
+    const ExpressionType & expr(){return m_expr;}
+    /*
+    FormExpression(const Expression & other): Expression(other) {}
+    FormExpression(const FormExpression & other): Expression(static_cast<const Expression>(other)) {}
+    */
+    private:
+    const Expression & m_expr;
+
 };
 
 template <typename SimplicialComplex>
@@ -89,6 +94,7 @@ protected:
 
 private:
     const SimplicialComplex & m_sc;
+    DynamicVector m_data;
 };
 
 
