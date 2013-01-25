@@ -6,44 +6,45 @@
 #include <type_traits>
 enum FormType {PRIMAL_FORM, DUAL_FORM, BOTH_FORM};
 
-template <FormType TypeIn_, int NIn_, FormType TypeOut_, int NOut_, typename Expression>
+template <int Dim_, FormType TypeIn_, int NIn_, FormType TypeOut_, int NOut_, typename Expression>
 struct FormExpression
 {
+    const static int Dim = Dim_;
     const static FormType TypeIn = TypeIn_;//Typein = -1 means that this should resolve to a vector
     const static FormType TypeOut = TypeOut_;
     const static int NIn = NIn_;
     const static int NOut = NOut_;
+    typedef Expression ExpressionType;
     FormExpression(const Expression & exp): expr(exp) {}
 
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
-    const Expression & expr;
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    Expression expr;
 
 };
 
 
-template <typename DynamicVector,FormType Type1, int N1>
+template <int Dim, typename DynamicVector,FormType Type1, int N1>
 //Type1 doesn't do anything
-class Form: public FormExpression<Type1,-1,Type1,N1, DynamicVector>
+class Form: public FormExpression<Dim,Type1,-1,Type1,N1, DynamicVector>
 {
 private:
-    typedef Form<DynamicVector,Type1,N1> MyType;
+    typedef Form<Dim,DynamicVector,Type1,N1> MyType;
 public:
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     static const int N = N1;
     static const FormType Type = Type1;
-    typedef FormExpression<Type,-1,Type,N,DynamicVector> Parent;
+    typedef FormExpression<Dim,Type,-1,Type,N,DynamicVector> Parent;
+    using Parent::expr;
     //typedef typename Parent::ExpressionType ExpressionType;
-    Form(int size=0): Parent(m_data), m_data(size) {m_data.setConstant(typename DynamicVector::Scalar(0));}
-    Form(const DynamicVector & other): Parent(m_data)
+    Form(int size=0): Parent(DynamicVector::Zero(size))/*, expr(size)*/ {}
+    Form(const DynamicVector & other): Parent(expr)
     {
-        assert(m_data.size() == other.size());
-        m_data = other;
+        assert(expr.size() == other.size());
+        expr = other;
     }
-    Form(const MyType & other): Parent(m_data), m_data(other.constData()) {}
-    template <typename Expr>
-    Form(const Expr & other): Parent(m_data), m_data(other) {}
+    Form(const MyType & other): Parent(expr)/*, expr(other.constData())*/ {}
     template <FormType TypeIn, int NIn, FormType TypeOut, int NOut, typename Expr2>
-        Form(const FormExpression<TypeIn,NIn,TypeOut,NOut,Expr2> & rhs): Parent(m_data), m_data(rhs.expr)
+        Form(FormExpression<Dim,TypeIn,NIn,TypeOut,NOut,Expr2> const & rhs): Parent(rhs.expr)//, expr(rhs.expr)
         {
             static_assert(
                     (NIn== -1) &&
@@ -51,35 +52,37 @@ public:
                     (NOut == N)
                     , "Equality can't combine different forms");
             std::cout << rhs.expr.rows() << " " << rhs.expr.cols() << std::endl;
-            std::cout << m_data.rows() << " " << m_data.cols() << std::endl;
-            std::cout << "Data: " << m_data.transpose() << std::endl;
+            std::cout << expr.rows() << " " << expr.cols() << std::endl;
+            //std::cout << "Data: " << expr.transpose() << std::endl;
         }
-    DynamicVector & data(){return m_data;}
-    const DynamicVector & constData() const {return m_data;}
+    DynamicVector & data(){return expr;}
+    const DynamicVector & constData() const {return expr;}
 private:
-    DynamicVector m_data;
+    //DynamicVector expr;
 };
 
 
 
-template <FormType TypeIn_, int NIn_, FormType TypeOut_, int NOut_, typename MatrixType>
-class FormOperator: public FormExpression<TypeIn_,NIn_,TypeOut_,NOut_, MatrixType>
+template <int Dim,FormType TypeIn_, int NIn_, FormType TypeOut_, int NOut_, typename MatrixType>
+class FormOperator: public FormExpression<Dim,TypeIn_,NIn_,TypeOut_,NOut_, MatrixType>
 {
 private:
-    typedef FormOperator<TypeIn_, NIn_, TypeOut_,NOut_,MatrixType> MyType;
+    typedef FormOperator<Dim,TypeIn_, NIn_, TypeOut_,NOut_,MatrixType> MyType;
     public:
-        EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
         static const int NIn = NIn_;
         static const FormType TypeIn = TypeIn_;
         static const int NOut = NOut_;
         static const FormType TypeOut = TypeOut_;
-        typedef  FormExpression<TypeIn_,NIn_,TypeOut_,NOut_, MatrixType> Parent;
-    template <typename Expr>
-    FormOperator(const Expr & other): Parent(m_data), m_data(other) {}
-    FormOperator(const MyType & other): Parent(m_data), m_data(other.constData()) {}
-        FormOperator(): Parent(m_data) {}
+        typedef  FormExpression<Dim,TypeIn_,NIn_,TypeOut_,NOut_, MatrixType> Parent;
+    using Parent::expr;
+    //template <typename Expr>
+    //FormOperator(const Expr & other): Parent(expr){}//, expr(other) {}
+    FormOperator(const MyType & other): Parent(other.expr)/*, expr(other.constData())*/ {}
+        //FormOperator(): Parent(expr) {}
+    FormOperator(const MatrixType & mat): Parent(mat) {}
     template <FormType _TypeIn, int _NIn, FormType _TypeOut, int _NOut, typename Expr2>
-        FormOperator(const FormExpression<TypeIn,NIn,TypeOut,NOut,Expr2> & rhs): Parent(m_data)
+        FormOperator(const FormExpression<Dim,TypeIn,NIn,TypeOut,NOut,Expr2> & rhs): Parent(expr)
         {
             static_assert(
                     (TypeIn == _TypeIn) &&
@@ -87,12 +90,12 @@ private:
                     (TypeOut == _TypeOut) &&
                     (NOut == _NOut)
                     , "Equality can't combine different forms");
-            m_data = rhs.expr;
+            expr = rhs.expr;
         }
-    MatrixType & data(){return m_data;}
-    const MatrixType & constData() const {return m_data;}
+    MatrixType & data(){return expr;}
+    const MatrixType & constData() const {return expr;}
     private:
-        MatrixType m_data;
+        //MatrixType m_data;
 
 };
 
@@ -102,10 +105,10 @@ class FormFactory{
         FormFactory(const SimplicialComplex & sc): m_sc(sc) {}
 
         template <FormType Type, int N>
-            Form<typename SimplicialComplex::NumTraits::DynamicVector,Type,N> genForm()
+            Form<SimplicialComplex::Dim, typename SimplicialComplex::NumTraits::DynamicVector,Type,N> genForm()
             {
         static_assert(N <= SimplicialComplex::Dim,"Form can't be of higher dim than top dim of simplicial complex");
-                return Form<typename SimplicialComplex::NumTraits::DynamicVector,Type,N>(
+                return Form<SimplicialComplex::Dim,typename SimplicialComplex::NumTraits::DynamicVector,Type,N>(
           (Type == PRIMAL_FORM) ?  m_sc.template numSimplices<N>() : m_sc.template numSimplices <SimplicialComplex::Dim-N>()
               );
             }
@@ -142,8 +145,8 @@ class HiddenOperatorContainer: public HiddenOperatorContainer<SC,TmD-1>
     }
 
 protected://Data
-    FormOperator<BOTH_FORM,D,BOTH_FORM,D+1,SparseMatrixColMajor> m_d;
-    FormOperator<PRIMAL_FORM,D,DUAL_FORM,TmD, DiagonalMatrix> m_hodge;
+    FormOperator<TopD,BOTH_FORM,D,BOTH_FORM,D+1,SparseMatrixColMajor> m_d;
+    FormOperator<TopD,PRIMAL_FORM,D,DUAL_FORM,TmD, DiagonalMatrix> m_hodge;
 };
 
 template <typename SC>
@@ -172,7 +175,7 @@ public:
     typedef typename NumTraits::SparseMatrixColMajor SparseMatrixColMajor;
     typedef typename NumTraits::DiagonalMatrix DiagonalMatrix;
 
-    static const unsigned int Dim = SC::Dim;
+    static const int Dim = SC::Dim;
 
     typedef FormFactory<SC> FF;
     typedef OperatorContainer<SC> OC;
@@ -185,13 +188,13 @@ public:
 
 
     template <int N>
-    const FormOperator<BOTH_FORM,N,BOTH_FORM,N+1,SparseMatrixColMajor> & d()const
+    const FormOperator<Dim,BOTH_FORM,N,BOTH_FORM,N+1,SparseMatrixColMajor> & d()const
     {
         return HiddenOperatorContainer<SC,Dim-N>::m_d;
     }
 
     template <int N, FormType Form = PRIMAL_FORM>
-    const FormOperator<BOTH_FORM,N,BOTH_FORM,Dim-N,DiagonalMatrix> & h()const
+    const FormOperator<Dim,BOTH_FORM,N,BOTH_FORM,Dim-N,DiagonalMatrix> & h()const
     {
         if(Form == PRIMAL_FORM)
         {
@@ -221,6 +224,7 @@ public:
         //or it maps Dual, N to Primal,Dim-N
         return ResultExprType(d<N>() * f);
     }
+    */
     /*
     template <int N, typename Mat>
     auto h(const Mat & m) const -> decltype(h<N>() * m)

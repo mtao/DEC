@@ -5,47 +5,44 @@
 #endif
 #include <typeinfo>
 
-    template <FormType TypeIn, int NIn,FormType TypeOut, int NOut,typename Expr1, typename Expr2>
-auto operator+(const FormExpression<TypeIn,NIn,TypeOut,NOut,Expr1> & a, const FormExpression<TypeIn,NIn,TypeOut,NOut,Expr2> & b)
+    template <int D, FormType TypeIn, int NIn,FormType TypeOut, int NOut,typename Expr1, typename Expr2>
+auto operator+(const FormExpression<D,TypeIn,NIn,TypeOut,NOut,Expr1> & a, const FormExpression<D,TypeIn,NIn,TypeOut,NOut,Expr2> & b)
     ->
-    const FormExpression<TypeIn, NIn, TypeOut, NOut,
+    const FormExpression<D,TypeIn, NIn, TypeOut, NOut,
     decltype(
             std::declval<Expr1>()+std::declval<Expr2>()
             )>
 {
-    std::cout << "Operator+ " << std::endl;
-    std::cout << "lhs: " << a.expr.rows() << " " << a.expr.cols() << std::endl;
-    std::cout << "rhs: " << b.expr.rows() << " " << b.expr.cols() << std::endl;
-    auto expr = a.expr+b.expr;
-    std::cout << "expr: " << expr.rows() << " " << expr.cols() << std::endl;
     return
-        FormExpression<TypeIn, NIn, TypeOut, NOut,
+        FormExpression<D,TypeIn, NIn, TypeOut, NOut,
         decltype(
                 std::declval<Expr1>()+std::declval<Expr2>()
-                )> (expr);
-    /*
-        decltype(
-                std::declval<Expr1>()+std::declval<Expr2>()
-                )> (a.expr+b.expr);
-                */
+                )> {a.expr+b.expr};
 }
-
-    template <FormType TypeIn, int NIn,FormType TypeOut, int NOut,typename Expr1, typename Expr2>
-auto operator-(const FormExpression<TypeIn,NIn,TypeOut,NOut,Expr1> & a, const FormExpression<TypeIn,NIn,TypeOut,NOut,Expr2> & b)
+constexpr int toPrimalDim(FormType type, int N, int TopD){return 0;}
+/*
+    template <
+        FormType TypeIn1, int NIn1,FormType TypeOut1, int NOut1, typename Expr1,
+        FormType TypeIn1, int NIn1,FormType TypeOut1, int NOut1,typename Expr2
+        >
+auto operator-(const FormExpression<TypeIn1,NIn1,TypeOut1,NOut1,Expr1> & a, const FormExpression<TypeIn2,NIn2,TypeOut2,NOut2,Expr2> & b)
     ->
     FormExpression<TypeIn, NIn, TypeOut, NOut,
     decltype(
             std::declval<Expr1>()-std::declval<Expr2>()
             )>
 {
+    static_assert(
+                ()
+                );
     return
         FormExpression<TypeIn, NIn, TypeOut, NOut,
         decltype(
                 std::declval<Expr1>()-std::declval<Expr2>()
-                )> (a.expr+b.expr);
+                )> (a.expr-b.expr);
 }
 
-    template <FormType TypeIn, int NIn,FormType TypeMid,int NMid, FormType TypeOut, int NOut,typename Expr1, typename Expr2>
+    template <FormType TypeIn1, int NIn1,FormType TypeOut1,int NOut1, FormType TypeOut2, int NOut2,typename Expr2>
 auto operator*(const FormExpression<TypeMid,NMid,TypeOut,NOut,Expr1> & a, const FormExpression<TypeIn,NIn,TypeMid,NMid,Expr2> & b)
     ->
     FormExpression<TypeIn, NIn, TypeOut, NOut,
@@ -85,5 +82,5 @@ auto operator*(const FormExpression<TypeIn,NIn,TypeOut,NOut,Expr> & a, typename 
                    std::declval<Expr>()+std::declval<Scalar>()
                    )> (a*b.expr);
 }
-
+*/
 #endif
