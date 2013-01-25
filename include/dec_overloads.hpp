@@ -5,16 +5,25 @@
 #endif
 #include <typeinfo>
 
-    template <int D, FormType TypeIn, int NIn,FormType TypeOut, int NOut,typename Expr1, typename Expr2>
-auto operator+(const FormExpression<D,TypeIn,NIn,TypeOut,NOut,Expr1> & a, const FormExpression<D,TypeIn,NIn,TypeOut,NOut,Expr2> & b)
+template <FormType F1, FormType F2>
+struct deduceFormType
+{
+    typedef form_traits<(
+            Traits1::TypeIn==BOTH_FORM)?Traits2:()
+        type;
+};
+
+    template <typename Traits1, typename Traits2,typename Expr1, typename Expr2>
+auto operator+(const FormExpression<Traits1,Expr1> & a, const FormExpression<Traits2,Expr2> & b)
     ->
-    const FormExpression<D,TypeIn, NIn, TypeOut, NOut,
+    const FormExpression<deduceTraits_addition<Traits1,Traits2>::type,
     decltype(
             std::declval<Expr1>()+std::declval<Expr2>()
             )>
 {
+    static_assert(deduceType(Traits1,Traits2), "Expression types are not compatible");
     return
-        FormExpression<D,TypeIn, NIn, TypeOut, NOut,
+        FormExpression<deduceTraits_addition<Traits1,Traits2>::type,
         decltype(
                 std::declval<Expr1>()+std::declval<Expr2>()
                 )> {a.expr+b.expr};
