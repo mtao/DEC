@@ -4,14 +4,15 @@
 #include <utility>
 #include <assert.h>
 #include <type_traits>
-enum FormType {PRIMAL_FORM, DUAL_FORM, BOTH_FORM};
-template <int Dim_, FormType TypeIn_, int NIn_, FormType TypeOut_, int NOut_>
+enum FormType {NO_FORM=0, PRIMAL_FORM=1, DUAL_FORM=2, BOTH_FORM=3};
+template <int Dim_, FormType TypeIn_, int NIn_, FormType TypeOut_, int NOut_, bool isVector_=false>
 struct form_traits{
     const static int Dim = Dim_;
     const static FormType TypeIn = TypeIn_;//Typein = -1 means that this should resolve to a vector
     const static FormType TypeOut = TypeOut_;
     const static int NIn = NIn_;
     const static int NOut = NOut_;
+    const static bool isVector = isVector_;
 
 };
 
@@ -28,34 +29,36 @@ struct FormExpression
     const static int NOut = Traits::NOut;
     typedef Expression ExpressionType;
     FormExpression(const Expression & exp): expr(exp) {}
+        Expression & data(){return expr;}
+        const Expression & constData() const {return expr;}
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    Expression expr;
+        Expression expr;
 
 };
 
 
-template <int Dim, typename DynamicVector,FormType Type, int N>
+template <int Dim, typename DynamicVector,FormType Type1, int N1>
 //Type1 doesn't do anything
-class Form: public FormExpression<form_traits<Dim,Type1,-1,Type1,N1>, DynamicVector>
+class Form: public FormExpression<form_traits<Dim,Type1,-1,Type1,N1,true>, DynamicVector>
 {
-private:
-    typedef Form<Dim,DynamicVector,Type1,N1> MyType;
-public:
-    typedef form_traits<Dim,Type1,-1,Type1,N1> Traits;
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    typedef FormExpression<Traits,DynamicVector> Parent;
-    using Parent::expr;
-    //typedef typename Parent::ExpressionType ExpressionType;
-    Form(int size=0): Parent(DynamicVector::Zero(size))/*, expr(size)*/ {}
-    Form(const DynamicVector & other): Parent(expr)
+    private:
+        typedef Form<Dim,DynamicVector,Type1,N1> MyType;
+    public:
+        typedef form_traits<Dim,Type1,-1,Type1,N1,true> Traits;
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+            typedef FormExpression<Traits,DynamicVector> Parent;
+        using Parent::expr;
+        //typedef typename Parent::ExpressionType ExpressionType;
+        Form(int size=0): Parent(DynamicVector::Zero(size))/*, expr(size)*/ {}
+        Form(const DynamicVector & other): Parent(expr)
     {
         assert(expr.size() == other.size());
         expr = other;
     }
-    Form(const MyType & other): Parent(expr)/*, expr(other.constData())*/ {}
-    template <Traits1, typename Expr2>
-        Form(FormExpression<Traits1,Expr2> const & rhs): Parent(rhs.expr)//, expr(rhs.expr)
+        Form(const MyType & other): Parent(expr)/*, expr(other.constData())*/ {}
+        template <typename Traits1, typename Expr2>
+            Form(FormExpression<Traits1,Expr2> const & rhs): Parent(rhs.expr)//, expr(rhs.expr)
         {
             static_assert(
                     (Traits1::NIn== -1) &&
@@ -66,10 +69,8 @@ public:
             std::cout << expr.rows() << " " << expr.cols() << std::endl;
             //std::cout << "Data: " << expr.transpose() << std::endl;
         }
-    DynamicVector & data(){return expr;}
-    const DynamicVector & constData() const {return expr;}
-private:
-    //DynamicVector expr;
+    private:
+        //DynamicVector expr;
 };
 
 
@@ -77,20 +78,20 @@ private:
 template <typename Traits_, typename MatrixType>
 class FormOperator: public FormExpression<Traits_, MatrixType>
 {
-private:
-    typedef FormOperator<Traits_,MatrixType> MyType;
+    private:
+        typedef FormOperator<Traits_,MatrixType> MyType;
     public:
-    typedef Traits_ Traits;
+        typedef Traits_ Traits;
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-        typedef  FormExpression<Traits, MatrixType> Parent;
-    using Parent::expr;
-    //template <typename Expr>
-    //FormOperator(const Expr & other): Parent(expr){}//, expr(other) {}
-    FormOperator(const MyType & other): Parent(other.expr)/*, expr(other.constData())*/ {}
+            typedef  FormExpression<Traits, MatrixType> Parent;
+        using Parent::expr;
+        //template <typename Expr>
+        //FormOperator(const Expr & other): Parent(expr){}//, expr(other) {}
+        FormOperator(const MyType & other): Parent(other.expr)/*, expr(other.constData())*/ {}
         //FormOperator(): Parent(expr) {}
-    FormOperator(const MatrixType & mat): Parent(mat) {}
-    template <typename _Traitst, typename Expr2>
-        FormOperator(const FormExpression<_Traits,Expr2> & rhs): Parent(expr)
+        FormOperator(const MatrixType & mat): Parent(mat) {}
+        template <typename _Traits, typename Expr2>
+            FormOperator(const FormExpression<_Traits,Expr2> & rhs): Parent(expr)
         {
             static_assert(
                     (Traits::TypeIn == _Traits::TypeIn) &&
@@ -100,8 +101,6 @@ private:
                     , "Equality can't combine different forms");
             expr = rhs.expr;
         }
-    MatrixType & data(){return expr;}
-    const MatrixType & constData() const {return expr;}
     private:
         //MatrixType m_data;
 
@@ -115,10 +114,10 @@ class FormFactory{
         template <FormType Type, int N>
             Form<SimplicialComplex::Dim, typename SimplicialComplex::NumTraits::DynamicVector,Type,N> genForm()
             {
-        static_assert(N <= SimplicialComplex::Dim,"Form can't be of higher dim than top dim of simplicial complex");
+                static_assert(N <= SimplicialComplex::Dim,"Form can't be of higher dim than top dim of simplicial complex");
                 return Form<SimplicialComplex::Dim,typename SimplicialComplex::NumTraits::DynamicVector,Type,N>(
-          (Type == PRIMAL_FORM) ?  m_sc.template numSimplices<N>() : m_sc.template numSimplices <SimplicialComplex::Dim-N>()
-              );
+                        (Type == PRIMAL_FORM) ?  m_sc.template numSimplices<N>() : m_sc.template numSimplices <SimplicialComplex::Dim-N>()
+                        );
             }
 
     private:
@@ -143,150 +142,210 @@ class HiddenOperatorContainer: public HiddenOperatorContainer<SC,TmD-1>
         HiddenOperatorContainer(const SC & sc)
             : Parent(sc)
               , m_d(sc.template b<D+1>().transpose())
-              , m_hodge(sc.template numSimplices<D>())
+              , m_hodge_primal(sc.template numSimplices<D>())
+              , m_hodge_dual(sc.template numSimplices<D>())
     {
         for(auto&& s: sc.template constSimplices<D>())
         {
-            m_hodge.data().diagonal()(s.Index()) = s.DualVolume() / s.Volume();
+            m_hodge_primal.data().diagonal()(s.Index()) = s.DualVolume() / s.Volume();
+            m_hodge_dual.data().diagonal()(s.Index()) = ((D*(TmD)%2==0)?1:-1)*s.Volume() / s.DualVolume();
         }
 
     }
 
-protected://Data
-    FormOperator<form_traits<TopD,BOTH_FORM,D,BOTH_FORM,D+1>,SparseMatrixColMajor> m_d;
-    FormOperator<form_traits<TopD,PRIMAL_FORM,D,DUAL_FORM,TmD>, DiagonalMatrix> m_hodge;
+    protected://Data
+        FormOperator<form_traits<TopD,BOTH_FORM,D,BOTH_FORM,D+1>,SparseMatrixColMajor> m_d;
+
+        //SparseMatrixColMajor m_d;
+        FormOperator<form_traits<TopD,PRIMAL_FORM,D,DUAL_FORM,TmD>, DiagonalMatrix> m_hodge_primal;//primal D -> dual TmD
+        FormOperator<form_traits<TopD,DUAL_FORM,TmD,PRIMAL_FORM,D>, DiagonalMatrix> m_hodge_dual;//dual TmD -> primal D
+
+        /*
+           template <FormType Type>
+           const typename std::enable_if<Type == PRIMAL_FORM, decltype(m_hodge_primal)>::type &
+           internal_h()
+           {
+           return m_hodge_primal;
+           }
+           */
+
+    private:
+        struct primal_tag{};
+        struct dual_tag{};
+        auto internal_h(primal_tag)
+            -> const decltype(m_hodge_primal) &
+            {
+                return m_hodge_primal;
+            }
+        auto  internal_h(dual_tag)
+            -> const decltype(m_hodge_dual) &
+            {
+                return m_hodge_dual;
+            }
+    protected:
+        template <FormType Type>
+            auto internal_h()
+            -> const typename std::conditional<Type==PRIMAL_FORM, decltype(m_hodge_primal), decltype(m_hodge_dual) >::type &
+            {
+                return internal_h(std::conditional<Type==PRIMAL_FORM, primal_tag, dual_tag>());
+
+            }
 };
+/*
+   template <typename SC, int TmD>
+   auto HiddenOperatorContainer<SC,TmD>::h_()
+   -> const decltype(m_hodge_dual) & 
+   {
+   return m_hodge_dual;
+   }
+   */
 
 template <typename SC>
 class HiddenOperatorContainer<SC,0>{
-protected:
-    HiddenOperatorContainer(const SC &) {}
+    protected:
+        HiddenOperatorContainer(const SC &) {}
 };
 
 template <typename SC>
 class OperatorContainer: public HiddenOperatorContainer<SC,SC::Dim> {
-protected:
-    OperatorContainer(const SC & sc)
-        : HiddenOperatorContainer<SC,SC::Dim>(sc)
-    {
-    }
-    typename SC::NumTraits::SparseMatrix m_hdhd;
+    protected:
+        OperatorContainer(const SC & sc)
+            : HiddenOperatorContainer<SC,SC::Dim>(sc)
+        {
+        }
+        typename SC::NumTraits::SparseMatrix m_hdhd;
 
 };
 
 template <typename SC>
 class DEC: public FormFactory<SC>, public OperatorContainer<SC>
 {
-public:
-    typedef SC SimplicialComplex;
-    typedef typename SC::NumTraits NumTraits;
-    typedef typename NumTraits::SparseMatrixColMajor SparseMatrixColMajor;
-    typedef typename NumTraits::DiagonalMatrix DiagonalMatrix;
+    public:
+        typedef SC SimplicialComplex;
+        typedef typename SC::NumTraits NumTraits;
+        typedef typename NumTraits::SparseMatrixColMajor SparseMatrixColMajor;
+        typedef typename NumTraits::DiagonalMatrix DiagonalMatrix;
 
-    static const int Dim = SC::Dim;
+        static const int Dim = SC::Dim;
 
-    typedef FormFactory<SC> FF;
-    typedef OperatorContainer<SC> OC;
+        typedef FormFactory<SC> FF;
+        typedef OperatorContainer<SC> OC;
 
-    DEC(const SimplicialComplex & sc)
-        : FF(sc)
-        , OC(sc)
-        , m_sc(sc)
+        DEC(const SimplicialComplex & sc)
+            : FF(sc)
+              , OC(sc)
+              , m_sc(sc)
     {}
 
 
-    template <int N>
-    const auto & d()const
-    {
-        return HiddenOperatorContainer<SC,Dim-N>::m_d;
-    }
-
-    template <int N, FormType Form = PRIMAL_FORM>
-    const auto & h()const
-    {
-        if(Form == PRIMAL_FORM)
-        {
-            return HiddenOperatorContainer<SC,Dim-N>::m_hodge;
-        }
-        else
-        {
-            return ((N*(Dim-N)%2==0)?1:-1)*h<N>().inverse();
-        }
-    }
-
-    /*
-    template <FormType Type, int N>
-    const Form<SC,Type,N+1> d(const Form<SC,Type,N> & f)const
-    {
-        return Form<SC,Type,N+1>(d<N>()*f);
-    }
-    template <FormType Type, int N, typename Expression>
-    auto d(const FormObject & f) const
-    -> FormExpression<Type,N+1,decltype(d<N>()*f)>
-    {
-        typedef FormExpression<
-                DUAL_FORM, N+1,
-                decltype(d<N>()*f)
-                > ResultExprType;
-        //should map Primal,N to Dual,Dim-N
-        //or it maps Dual, N to Primal,Dim-N
-        return ResultExprType(d<N>() * f);
-    }
-    */
-    /*
-    template <int N, typename Mat>
-    auto h(const Mat & m) const -> decltype(h<N>() * m)
-    {
-        return h<N>() * m;
-    }
-    */
-    /*
-    template <int N, typename Expression>
-    auto h(const FormExpression<PRIMAL_FORM,N,Expression> & f) const
-    -> FormExpression<DUAL_FORM,Dim-N,decltype(h<N>()*f)>
-    {
-        typedef FormExpression<
-                DUAL_FORM, Dim-N,
-                decltype(h<N>()*f)
-                > ResultExprType;
-        //should map Primal,N to Dual,Dim-N
-        //or it maps Dual, N to Primal,Dim-N
-        return ResultExprType(h<N>() * f);
-    }
-    template <int N, typename Expression>
-    auto h(const FormExpression<DUAL_FORM,N,Expression> & f) const
-    -> FormExpression<PRIMAL_FORM,Dim-N,decltype(((N*(Dim-N)%2==0)?1:-1)*h<N>().inverse() * f)>
-    {
-        typedef FormExpression<
-                PRIMAL_FORM,Dim-N,
-                decltype(
-                    ((N*(Dim-N)%2==0)?1:-1)*h<N>().inverse() * f
-                    )
-                > ResultExprType;
-
-        //should map Primal,N to Dual,Dim-N
-        //or it maps Dual, N to Primal,Dim-N
-        return ResultExprType(((N*(Dim-N)%2==0)?1:-1)*h<N>().inverse() * f);
-    }
-    */
-    /*
-        template <int N>
-            const Form<SC,DUAL_FORM,Dim-N> h(const Form<SC,PRIMAL_FORM,N> & f)const
+    private:
+    public:
+        template <int N, FormType Form = BOTH_FORM>
+            auto d()const
+            -> const decltype(HiddenOperatorContainer<SC,Dim-N>::m_d) &
             {
-                return h<N>() * f;
+                //return FormOperator<form_traits<Dim,Form,N,Form,N+1>,const SparseMatrixColMajor &> 
+                //(HiddenOperatorContainer<SC,Dim-N>::m_d);
+                return HiddenOperatorContainer<SC,Dim-N>::m_d;
             }
 
-        template <int N>
-            const Form<SC,PRIMAL_FORM,N> h(const Form<SC,DUAL_FORM,Dim-N> & f)const
+        template <int N, FormType Form = PRIMAL_FORM>
+            auto h()const
+            -> decltype(HiddenOperatorContainer<SC,(Form==PRIMAL_FORM)?Dim-N:N>::template internal_h<Form>())
             {
-                //enforce inverse hodge keeeps  *^{-1}* = -1^{k*n-k}
-                return ((N*(Dim-N)%2==0)?1:-1)*h<N>().inverse() * f;
+                return HiddenOperatorContainer<SC,Form==PRIMAL_FORM?Dim-N:N>::template internal_h<Form>();
+            }
+        template <typename Traits, typename Expr>
+            auto d(const FormExpression<Traits, Expr> & rhs)
+            -> decltype (d<Traits::NOut, Traits::TypeOut>() * rhs)
+            {
+                return 
+                    d<Traits::NOut, Traits::TypeOut>() * rhs;
+            }
+
+        /*
+        template <typename Traits, typename Expr>
+            auto h(const FormExpression<Traits, Expr> & rhs)
+            -> decltype (d<Traits::NOut, Traits::TypeOut>() * rhs)
+            {
+                return 
+                    h<Traits::NOut, Traits::TypeOut>() * rhs;
             }
             */
 
+        /*
+           template <FormType Type, int N>
+           const Form<SC,Type,N+1> d(const Form<SC,Type,N> & f)const
+           {
+           return Form<SC,Type,N+1>(d<N>()*f);
+           }
+           template <FormType Type, int N, typename Expression>
+           auto d(const FormObject & f) const
+           -> FormExpression<Type,N+1,decltype(d<N>()*f)>
+           {
+           typedef FormExpression<
+           DUAL_FORM, N+1,
+           decltype(d<N>()*f)
+           > ResultExprType;
+        //should map PRIMAL,N to DUAL,Dim-N
+        //or it maps DUAL, N to PRIMAL,Dim-N
+        return ResultExprType(d<N>() * f);
+        }
+        */
+        /*
+           template <int N, typename Mat>
+           auto h(const Mat & m) const -> decltype(h<N>() * m)
+           {
+           return h<N>() * m;
+           }
+           */
+        /*
+           template <int N, typename Expression>
+           auto h(const FormExpression<PRIMAL_FORM,N,Expression> & f) const
+           -> FormExpression<DUAL_FORM,Dim-N,decltype(h<N>()*f)>
+           {
+           typedef FormExpression<
+           DUAL_FORM, Dim-N,
+           decltype(h<N>()*f)
+           > ResultExprType;
+        //should map PRIMAL,N to DUAL,Dim-N
+        //or it maps DUAL, N to PRIMAL,Dim-N
+        return ResultExprType(h<N>() * f);
+        }
+        template <int N, typename Expression>
+        auto h(const FormExpression<DUAL_FORM,N,Expression> & f) const
+        -> FormExpression<PRIMAL_FORM,Dim-N,decltype(((N*(Dim-N)%2==0)?1:-1)*h<N>().inverse() * f)>
+        {
+        typedef FormExpression<
+        PRIMAL_FORM,Dim-N,
+        decltype(
+        ((N*(Dim-N)%2==0)?1:-1)*h<N>().inverse() * f
+        )
+        > ResultExprType;
 
-private:
-    const SimplicialComplex & m_sc;
+        //should map PRIMAL,N to DUAL,Dim-N
+        //or it maps DUAL, N to PRIMAL,Dim-N
+        return ResultExprType(((N*(Dim-N)%2==0)?1:-1)*h<N>().inverse() * f);
+        }
+        */
+        /*
+           template <int N>
+           const Form<SC,DUAL_FORM,Dim-N> h(const Form<SC,PRIMAL_FORM,N> & f)const
+           {
+           return h<N>() * f;
+           }
+
+           template <int N>
+           const Form<SC,PRIMAL_FORM,N> h(const Form<SC,DUAL_FORM,Dim-N> & f)const
+           {
+        //enforce inverse hodge keeeps  *^{-1}* = -1^{k*n-k}
+        return ((N*(Dim-N)%2==0)?1:-1)*h<N>().inverse() * f;
+        }
+        */
+
+
+    private:
+        const SimplicialComplex & m_sc;
 };
 #include "dec_overloads.hpp"
 #endif
