@@ -26,6 +26,7 @@ SET(DEC_HEADERS
 ADD_CUSTOM_TARGET(Headers SOURCES ${DEC_HEADERS})
 
 SET (CMAKE_CXX_COMPILER             "/usr/bin/clang++")
+#SET (CMAKE_CXX_COMPILER             "/usr/bin/g++")
 
 
 ENABLE_TESTING()

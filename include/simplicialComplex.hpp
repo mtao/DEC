@@ -162,7 +162,7 @@ protected:
             int M = EmbeddedDim;
             typename NumTraits::DynamicMatrix m(M,clist.size()-N-1);
             auto&& origin = clist.back();
-            for(int i=N; i < clist.size()-1; ++i)
+            for(int i=N; i < static_cast<int>(clist.size())-1; ++i)
             {
                 m.col(i-N) = this->m_vertices[i] - origin;
             }
@@ -283,7 +283,7 @@ protected:
         int M = EmbeddedDim;
         typename NumTraits::DynamicMatrix m(M,clist.size()-1);
         auto&& origin = clist.back();
-        for(int i=0; i < clist.size()-1; ++i)
+        for(int i=0; i < static_cast<int>(clist.size())-1; ++i)
         {
             m.col(i) = this->m_vertices[i] - origin;
         }
