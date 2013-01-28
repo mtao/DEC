@@ -16,7 +16,7 @@ My DEC (Discrete Exterior Calculus) implementation which now marginally works.  
 * Can compose differential operators using the syntax
 
 <code>
-    h(d(h(d<1>()))) + d(h(d(h<1>())))
+    h(d(h(d\<1\>()))) + d(h(d(h\<1\>())))
 </code>
 
 to create an expression template that sits ontop of Eigen's expresison template system.  This is all done through the above mentioned typechecking and a template deduction.
