@@ -141,15 +141,15 @@ void writeSimplicialComplextoStream(const SimplicialComplex & sc, std::ostream &
     {
         os << "f ";
         if(s.IsNegative()) {
-            os << s[1] << " " << s[0] << " ";
+            os << s[1]+1 << " " << s[0]+1 << " ";
         }
         else
         {
-            os << s[0] << " " << s[1] << " ";
+            os << s[0]+1 << " " << s[1]+1 << " ";
         }
         for(int i=2; i < Dim; ++i)
         {
-            os << s[i] << " ";
+            os << s[i]+1 << " ";
         }
         os << std::endl;
     }
@@ -158,7 +158,6 @@ void writeSimplicialComplextoStream(const SimplicialComplex & sc, std::ostream &
 template <typename SimplicialComplex>
 void writeOBJfromSimplicialComplex(const SimplicialComplex & sc,const std::string & str)
 {
-    std::cout << "Writing SC to " << str << std::endl;
     std::ofstream os(str.c_str());
     writeSimplicialComplextoStream(sc,os);
 }

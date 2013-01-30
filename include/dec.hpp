@@ -4,7 +4,7 @@
 #include <utility>
 #include <assert.h>
 #include <type_traits>
-template <typename SC>
+template <typename Complex_>
 class DEC;
 
 enum FormType {NO_FORM=0, PRIMAL_FORM=1, DUAL_FORM=2, BOTH_FORM=3};
@@ -109,22 +109,22 @@ class FormOperator: public FormExpression<Traits_, MatrixType>
 
 };
 
-template <typename SimplicialComplex>
+template <typename Complex>
 class FormFactory{
     protected:
-        FormFactory(const SimplicialComplex & sc): m_sc(sc) {}
+        FormFactory(const Complex & sc): m_sc(sc) {}
 
         template <FormType Type, int N>
-            Form<SimplicialComplex::Dim, typename SimplicialComplex::NumTraits::DynamicVector,Type,N> genForm()
+            Form<Complex::Dim, typename Complex::NumTraits::DynamicVector,Type,N> genForm()
             {
-                static_assert(N <= SimplicialComplex::Dim,"Form can't be of higher dim than top dim of simplicial complex");
-                return Form<SimplicialComplex::Dim,typename SimplicialComplex::NumTraits::DynamicVector,Type,N>(
-                        (Type == PRIMAL_FORM) ?  m_sc.template numSimplices<N>() : m_sc.template numSimplices <SimplicialComplex::Dim-N>()
+                static_assert(N <= Complex::Dim,"Form can't be of higher dim than top dim of simplicial complex");
+                return Form<Complex::Dim,typename Complex::NumTraits::DynamicVector,Type,N>(
+                        (Type == PRIMAL_FORM) ?  m_sc.template numSimplices<N>() : m_sc.template numSimplices <Complex::Dim-N>()
                         );
             }
 
     private:
-        const SimplicialComplex & m_sc;
+        const Complex & m_sc;
 };
 
 struct primal_tag{};
@@ -133,19 +133,19 @@ struct dual_tag{};
 //TmD means Top dimension - D, in reality we're dealing with the Dth dimension 
 //This foolery is to make sure that we are building operators by going up in dimension
 //which is nice from a theoretical perspective (as the deRham complex goes upward)
-template <typename SC, int TmD>
-class HiddenOperatorContainer: public HiddenOperatorContainer<SC,TmD-1>
+template <typename Complex_, int TmD>
+class HiddenOperatorContainer: public HiddenOperatorContainer<Complex_,TmD-1>
 {
 
-    friend DEC<SC>;
+    friend DEC<Complex_>;
     protected:
-        const static int TopD = SC::Dim;
+        const static int TopD = Complex_::Dim;
         const static int D = TopD-TmD;
-        typedef typename SC::NumTraits NumTraits;
+        typedef typename Complex_::NumTraits NumTraits;
         typedef typename NumTraits::SparseMatrixColMajor SparseMatrixColMajor;
         typedef typename NumTraits::DiagonalMatrix DiagonalMatrix;
-        typedef HiddenOperatorContainer<SC,TmD-1> Parent;
-        HiddenOperatorContainer(const SC & sc)
+        typedef HiddenOperatorContainer<Complex_,TmD-1> Parent;
+        HiddenOperatorContainer(const Complex_ & sc)
             : Parent(sc)
               , m_d_primal(sc.template b<D+1>().transpose())
               , m_d_dual(sc.template b<TmD>())
@@ -213,27 +213,27 @@ class HiddenOperatorContainer: public HiddenOperatorContainer<SC,TmD-1>
             }
 };
 /*
-   template <typename SC, int TmD>
-   auto HiddenOperatorContainer<SC,TmD>::h_()
+   template <typename Complex_, int TmD>
+   auto HiddenOperatorContainer<Complex_,TmD>::h_()
    -> const decltype(m_hodge_dual) & 
    {
    return m_hodge_dual;
    }
    */
 
-template <typename SC>
-class HiddenOperatorContainer<SC,0>{
-    friend DEC<SC>;
-    typedef typename SC::NumTraits NumTraits;
+template <typename Complex_>
+class HiddenOperatorContainer<Complex_,0>{
+    friend DEC<Complex_>;
+    typedef typename Complex_::NumTraits NumTraits;
     typedef typename NumTraits::DiagonalMatrix DiagonalMatrix;
     typedef typename NumTraits::SparseMatrixColMajor SparseMatrixColMajor;
     protected:
-    HiddenOperatorContainer(const SC & sc)
-        : m_d_dual(sc.template b<SC::Dim>())
-          , m_hodge_primal(sc.template numSimplices<SC::Dim>())
-          , m_hodge_dual(sc.template numSimplices<SC::Dim>())
+    HiddenOperatorContainer(const Complex_ & sc)
+        : m_d_dual(sc.template b<Complex_::Dim>())
+          , m_hodge_primal(sc.template numSimplices<Complex_::Dim>())
+          , m_hodge_dual(sc.template numSimplices<Complex_::Dim>())
     {
-        for(auto&& s: sc.template constSimplices<SC::Dim>())
+        for(auto&& s: sc.template constSimplices<Complex_::Dim>())
         {
             m_hodge_primal.data().diagonal()(s.Index()) = s.DualVolume() / s.Volume();
             m_hodge_dual.data().diagonal()(s.Index()) = s.Volume() / s.DualVolume();
@@ -243,9 +243,9 @@ class HiddenOperatorContainer<SC,0>{
 
     protected:
     bool m_d_primal=false;
-    FormOperator<form_traits<SC::Dim,DUAL_FORM,0,DUAL_FORM,1>,const SparseMatrixColMajor &> m_d_dual;
-    FormOperator<form_traits<SC::Dim,PRIMAL_FORM,0,DUAL_FORM,SC::Dim>, DiagonalMatrix> m_hodge_primal;//primal D -> dual TmD
-    FormOperator<form_traits<SC::Dim,DUAL_FORM,SC::Dim,PRIMAL_FORM,0>, DiagonalMatrix> m_hodge_dual;//dual TmD -> primal D
+    FormOperator<form_traits<Complex_::Dim,DUAL_FORM,0,DUAL_FORM,1>,const SparseMatrixColMajor &> m_d_dual;
+    FormOperator<form_traits<Complex_::Dim,PRIMAL_FORM,0,DUAL_FORM,Complex_::Dim>, DiagonalMatrix> m_hodge_primal;//primal D -> dual TmD
+    FormOperator<form_traits<Complex_::Dim,DUAL_FORM,Complex_::Dim,PRIMAL_FORM,0>, DiagonalMatrix> m_hodge_dual;//dual TmD -> primal D
     private:
     auto internal_h(primal_tag) const
         -> const decltype(m_hodge_primal) &
@@ -282,32 +282,32 @@ class HiddenOperatorContainer<SC,0>{
         }
 };
 
-template <typename SC>
-class OperatorContainer: public HiddenOperatorContainer<SC,SC::Dim> {
+template <typename Complex_>
+class OperatorContainer: public HiddenOperatorContainer<Complex_,Complex_::Dim> {
     protected:
-        OperatorContainer(const SC & sc)
-            : HiddenOperatorContainer<SC,SC::Dim>(sc)
+        OperatorContainer(const Complex_ & sc)
+            : HiddenOperatorContainer<Complex_,Complex_::Dim>(sc)
         {
         }
-        typename SC::NumTraits::SparseMatrix m_hdhd;
+        typename Complex_::NumTraits::SparseMatrix m_hdhd;
 
 };
 
-template <typename SC>
-class DEC: public FormFactory<SC>, public OperatorContainer<SC>
+template <typename Complex_>
+class DEC: public FormFactory<Complex_>, public OperatorContainer<Complex_>
 {
     public:
-        typedef SC SimplicialComplex;
-        typedef typename SC::NumTraits NumTraits;
+        typedef Complex_ Complex;
+        typedef typename Complex_::NumTraits NumTraits;
         typedef typename NumTraits::SparseMatrixColMajor SparseMatrixColMajor;
         typedef typename NumTraits::DiagonalMatrix DiagonalMatrix;
 
-        static const int Dim = SC::Dim;
+        static const int Dim = Complex_::Dim;
 
-        typedef FormFactory<SC> FF;
-        typedef OperatorContainer<SC> OC;
+        typedef FormFactory<Complex_> FF;
+        typedef OperatorContainer<Complex_> OC;
 
-        DEC(const SimplicialComplex & sc)
+        DEC(const Complex & sc)
             : FF(sc)
               , OC(sc)
               , m_sc(sc)
@@ -318,15 +318,15 @@ class DEC: public FormFactory<SC>, public OperatorContainer<SC>
     public:
         template <int N, FormType Form = PRIMAL_FORM>
             auto d()const
-            -> decltype(dynamic_cast<const HiddenOperatorContainer<SC,(Form==PRIMAL_FORM)?Dim-N:N> *>(this)->template internal_d<Form>())
-            {    return dynamic_cast<const HiddenOperatorContainer<SC,(Form==PRIMAL_FORM)?Dim-N:N> *>(this)->template internal_d<Form>();}
+            -> decltype(dynamic_cast<const HiddenOperatorContainer<Complex_,(Form==PRIMAL_FORM)?Dim-N:N> *>(this)->template internal_d<Form>())
+            {    return dynamic_cast<const HiddenOperatorContainer<Complex_,(Form==PRIMAL_FORM)?Dim-N:N> *>(this)->template internal_d<Form>();}
 
 
 
         template <int N, FormType Form = PRIMAL_FORM>
             auto h()const
-            -> decltype(dynamic_cast<const HiddenOperatorContainer<SC,(Form==PRIMAL_FORM)?Dim-N:N> *>(this)->template internal_h<Form>())
-            {    return dynamic_cast<const HiddenOperatorContainer<SC,(Form==PRIMAL_FORM)?Dim-N:N> *>(this)->template internal_h<Form>();}
+            -> decltype(dynamic_cast<const HiddenOperatorContainer<Complex_,(Form==PRIMAL_FORM)?Dim-N:N> *>(this)->template internal_h<Form>())
+            {    return dynamic_cast<const HiddenOperatorContainer<Complex_,(Form==PRIMAL_FORM)?Dim-N:N> *>(this)->template internal_h<Form>();}
         template <typename Traits, typename Expr>
             auto d(const FormExpression<Traits, Expr> & rhs)
             -> decltype (d<Traits::NOut, Traits::TypeOut>() * rhs)
@@ -354,9 +354,9 @@ class DEC: public FormFactory<SC>, public OperatorContainer<SC>
 
         /*
            template <FormType Type, int N>
-           const Form<SC,Type,N+1> d(const Form<SC,Type,N> & f)const
+           const Form<Complex_,Type,N+1> d(const Form<Complex_,Type,N> & f)const
            {
-           return Form<SC,Type,N+1>(d<N>()*f);
+           return Form<Complex_,Type,N+1>(d<N>()*f);
            }
            template <FormType Type, int N, typename Expression>
            auto d(const FormObject & f) const
@@ -409,13 +409,13 @@ class DEC: public FormFactory<SC>, public OperatorContainer<SC>
         */
         /*
            template <int N>
-           const Form<SC,DUAL_FORM,Dim-N> h(const Form<SC,PRIMAL_FORM,N> & f)const
+           const Form<Complex_,DUAL_FORM,Dim-N> h(const Form<Complex_,PRIMAL_FORM,N> & f)const
            {
            return h<N>() * f;
            }
 
            template <int N>
-           const Form<SC,PRIMAL_FORM,N> h(const Form<SC,DUAL_FORM,Dim-N> & f)const
+           const Form<Complex_,PRIMAL_FORM,N> h(const Form<Complex_,DUAL_FORM,Dim-N> & f)const
            {
         //enforce inverse hodge keeeps  *^{-1}* = -1^{k*n-k}
         return ((N*(Dim-N)%2==0)?1:-1)*h<N>().inverse() * f;
@@ -424,7 +424,7 @@ class DEC: public FormFactory<SC>, public OperatorContainer<SC>
 
 
     private:
-        const SimplicialComplex & m_sc;
+        const Complex & m_sc;
 };
 #include "dec_overloads.hpp"
 #endif

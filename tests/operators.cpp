@@ -6,7 +6,7 @@
 class DECTest: public DEC<TriangleMesh>
 {
     public:
-    DECTest(const SimplicialComplex & sc): DEC<TriangleMesh>(sc)
+    DECTest(const Complex & sc): DEC<TriangleMesh>(sc)
     {
         std::cout << "Derivative: " << std::endl;
         std::cout << d<0>().constData() << std::endl;
