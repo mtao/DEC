@@ -26,6 +26,7 @@ class DECTest: public DEC<TriangleMesh>
     auto form2 = genForm<PRIMAL_FORM,1>();
     form2.data().setOnes();
     decltype(genForm<PRIMAL_FORM,1>()) form3(form2 + form2);
+    form3 = form3 + form2;
     std::cout << form.constData().transpose() << std::endl;
     std::cout << form2.constData().transpose() << std::endl;
     std::cout << form3.constData().transpose() << std::endl;

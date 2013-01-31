@@ -3,6 +3,7 @@
 
 #include "simplex.hpp"
 #include <vector>
+#include <array>
 #include <set>
 
 //Input N-simplices to generate the whole simplicial complex
@@ -99,6 +100,8 @@ protected:
     void init();
     int add(NSimplex & simplex);
     int createBoundary(NSimplex & simplex);
+    void genWhitneyBases();
+    std::array<Scalar,N+1> barycentricCoords(const NSimplex & s, const Vector & v);
 
     Eigen::Matrix<Scalar,EmbeddedDim,N> simplexToBaryMatrix(const mtao::IndexSet<N+1> & s)
     {
@@ -198,6 +201,7 @@ protected:
 protected:
     typedef SimplicialComplex<NT,N-1> SCm1;
     std::vector<Triplet > m_boundaryTriplets;
+    std::vector< std::array<Vector,N+1 > > m_whitneyBases;
     SparseMatrixColMajor m_boundary;//Rows are n-1 simplices cols are n simplices
     DiagonalMatrix m_interior;
     std::set<NSimplex> m_simplexSet;
@@ -207,6 +211,9 @@ protected:
 };
 
 //A 0-simplicial complex only manages
+//the vertices and some trivalish set of simplices.  vertices without any higher order
+//information are considered bad data and though stored here, they do not have simplices 
+//associated with them.
 template <typename NT>
 class SimplicialComplex<NT,0>
 {
@@ -304,10 +311,62 @@ protected:
 
 
 
+template <typename NT, int N>
+    void SimplicialComplex<NT,N>::genWhitneyBases()
+{
+    m_whitneyBases.resize(m_simplices.size());
+    std::transform(m_simplices.begin(), m_simplices.end(), m_whitneyBases.begin(), [&](const NSimplex & s) 
+            //-> std::map<int,Vector>
+            -> std::array<Vector,N+1>
+        {
+            //std::vector<int,Vector> mymap;
+            std::array<Vector,N+1> myarr;
+            int sind=0;
+            for(typename decltype(m_boundary)::InnerIterator it(m_boundary, s.Index()); it; ++it, ++sind)
+            {
+                //Assume that the center is circumcenter, which helps build whitney forms
+                auto&& sm1 = simplices<N-1>()[it.row()];
+                //compute the dimension that is missing
+                int n=s[N];
+                for(int i=0; i < N; ++i)
+                {
+                    if(s[i] != sm1[i])
+                    {
+                        n = s[i];
+                        break;
+                    }
+                }
+                auto&& m1cc = sm1.Center();
+                auto&& v = this->vertices()[n];
+                Vector d = s.Center()-m1cc;
+                Scalar d2n = d.squaredNorm();
+                Scalar scale = (v-m1cc).dot(d)/(d2n*d2n);
+                /*
+                mymap.insert(std::pair<int,Vector>(n,
+                        scale*d));
+                */
+                myarr[sind] = scale * d;
+
+
+        }
+//        return mymap;
+        return myarr;
+    });
+}
+template <typename NT, int N>
+auto SimplicialComplex<NT,N>::barycentricCoords(const NSimplex & s, const Vector & v) -> std::array<Scalar,N+1>
+{
+    std::array<Scalar,N+1> myvec;
+    int sind=0;
+    for(typename decltype(m_boundary)::InnerIterator it(m_boundary, s.Index()); it; ++it, ++sind)
+    {
+        myvec[sind] = m_whitneyBases[s.Index()][sind].dot(v - simplices<N-1>()[it.row()]);
+    }
+}
 //Check whether this simplex already exists
 //if it does exist set the index so the owner of the simplex knows where it belongs
 //if it doesn't exist push it into the list 
-template <typename NT,int N>
+    template <typename NT,int N>
 int SimplicialComplex<NT,N>::add(NSimplex & simplex)
 {
     simplex.setIndex(-1);
@@ -327,7 +386,7 @@ int SimplicialComplex<NT,N>::add(NSimplex & simplex)
 
 
 }
-template <typename NT,int N>
+    template <typename NT,int N>
 int SimplicialComplex<NT,N>::createBoundary(NSimplex& simplex)
 {
 
@@ -346,23 +405,23 @@ int SimplicialComplex<NT,N>::createBoundary(NSimplex& simplex)
 
         if(N != 1) {
             m_boundaryTriplets.push_back(Triplet(
-                                             SimplicialComplex<NT,N-1>::add(target),
-                                             simplex.Index(),
-                                             simplex.isSameSign(target)?1:-1));
+                        SimplicialComplex<NT,N-1>::add(target),
+                        simplex.Index(),
+                        simplex.isSameSign(target)?1:-1));
         }
         else
         {
             m_boundaryTriplets.push_back(Triplet(
-                                             SimplicialComplex<NT,N-1>::add(target),
-                                             simplex.Index(),
-                                             //(simplex.isSameSign(target)==(i==1))?1:-1));
-                                             (i==1)?1:-1));
+                        SimplicialComplex<NT,N-1>::add(target),
+                        simplex.Index(),
+                        //(simplex.isSameSign(target)==(i==1))?1:-1));
+                (i==1)?1:-1));
         }
 
     }
     return 0;
 }
-template <typename NT, int N>
+    template <typename NT, int N>
 void SimplicialComplex<NT,N>::init()
 {
     int index=0;
@@ -432,6 +491,7 @@ void SimplicialComplex<NT,N>::finalize()
     m_boundary.setFromTriplets(m_boundaryTriplets.begin(), m_boundaryTriplets.end());
     m_interior.resize(m_simplices.size());
     m_interior.setIdentity();
+    genWhitneyBases();
     
 
 

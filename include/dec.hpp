@@ -212,14 +212,6 @@ class HiddenOperatorContainer: public HiddenOperatorContainer<Complex_,TmD-1>
                 return internal_h(typename std::conditional<Type==PRIMAL_FORM, primal_tag, dual_tag>::type());
             }
 };
-/*
-   template <typename Complex_, int TmD>
-   auto HiddenOperatorContainer<Complex_,TmD>::h_()
-   -> const decltype(m_hodge_dual) & 
-   {
-   return m_hodge_dual;
-   }
-   */
 
 template <typename Complex_>
 class HiddenOperatorContainer<Complex_,0>{
