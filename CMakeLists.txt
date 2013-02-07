@@ -22,13 +22,14 @@ SET(DEC_HEADERS
     include/dec_overloads.hpp
     )
 
-ADD_CUSTOM_TARGET(Headers SOURCES ${DEC_HEADERS})
+ADD_CUSTOM_TARGET(headers SOURCES ${DEC_HEADERS})
 
 SET (CMAKE_CXX_COMPILER             "/usr/bin/clang++")
 #SET (CMAKE_CXX_COMPILER             "/usr/bin/g++")
-INSTALL(FILES ${DEC_HEADERS} DESTINATION /usr/local/include)
+INSTALL(FILES ${DEC_HEADERS} DESTINATION /usr/local/include/DEC)
 
 
 ENABLE_TESTING()
 ADD_SUBDIRECTORY(tests)
+ADD_SUBDIRECTORY(tools)
 

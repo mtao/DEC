@@ -1,0 +1,3 @@
+ADD_SUBDIRECTORY(render)
+message(${CMAKE_CURRENT_SOURCE_DIR})
+message(${CMAKE_SOURCE_DIR})

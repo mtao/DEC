@@ -1,0 +1,31 @@
+
+INCLUDE_DIRECTORIES(
+    ${CMAKE_SOURCE_DIR}/include
+    ./include
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_BINARY_DIR}
+    )
+SET(QTRENDER_SOURCES
+    src/qtmain.cpp
+    src/qtmainwindow.cpp
+    src/glutil.cpp
+    src/qtglwidget.cpp
+    )
+SET(QTRENDER_HEADERS_TOMOC
+    include/qtmainwindow.h
+    include/qtglwidget.h
+    )
+SET(QTRENDER_HEADERS
+    ${QTRENDER_HEADERS_TOMOC}
+    include/glutil.h
+    )
+
+FIND_PACKAGE(Qt4 REQUIRED)
+SET(QT_USE_QTOPENGL TRUE)
+QT4_WRAP_CPP(QTRENDER_HEADERS_MOC
+    ${QTRENDER_HEADERS_TOMOC})
+INCLUDE(${QT_USE_FILE})
+ADD_DEFINITIONS(${QT_DEFINITIONS})
+
+ADD_EXECUTABLE(qtRender ${QTRENDER_SOURCES} ${QTRENDER_HEADERS} ${QTRENDER_HEADERS_MOC})
+TARGET_LINK_LIBRARIES(qtRender ${QT_LIBRARIES} GLEW GL)
