@@ -1,11 +1,12 @@
 #ifndef INDEX_UTIL_H
 #define INDEX_UTIL_H
 #include <algorithm>
+#include <array>
 
 namespace mtao
 {
 template <unsigned int N, typename Index=unsigned int>
-struct IndexSet{
+struct IndexSet: public std::array<Index, N>{
     friend inline std::ostream& operator<<(std::ostream& os, const mtao::IndexSet<N,Index> & is)
     {
         os << "[" << is.Get(0);
@@ -16,37 +17,27 @@ struct IndexSet{
         os << "]";
         return os;
     }
-    Index m_data[N];
-    Index & operator[](int i)
-    {
-        return m_data[i];
-    }
-    Index Get ( int i ) const {return m_data[i];}
-    const Index & operator[](int i) const
-    {
-        return m_data[i];
-    }
+    Index Get ( int i ) const {return this->at(i);}
     IndexSet()
     {
-        std::fill(m_data, m_data+N, Index(0));
+        this->fill(0);
     }
 
     IndexSet(const IndexSet & other)
     {
-        std::copy(other.m_data, other.m_data+N, m_data);
+        std::copy(other.cbegin(), other.cend(), this->begin());
     }
 
     IndexSet(const Index ind[N])
     {
-        std::copy(ind,ind+N, m_data);
+        std::copy(ind,ind+N, this->begin());
     }
     IndexSet(std::initializer_list<Index> ind)
     {
-        std::copy(ind.begin(),ind.end(), m_data);
+        std::copy(ind.begin(),ind.end(), this->begin());
     }
 
 
-    const static unsigned int dim = N;
 
 public:
     inline bool operator==(const IndexSet<N,Index>& other ) const

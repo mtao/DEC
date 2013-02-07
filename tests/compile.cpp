@@ -31,16 +31,29 @@ int main()
         std::cout << m;
     }
     std::cout << std::endl;
+
     std::cout << sc.simplices<1>().size() << std::endl;
     for(auto & m: sc.simplices<1>())
     {
         std::cout << m;
     }
     std::cout << std::endl;
+    auto simps = sc.simplicesToArray<1>();
+    for(auto&& a: simps)
+    {
+        std::cout << a << " ";
+    }
+    std::cout << std::endl;
     std::cout << sc.simplices<2>().size() << std::endl;
     for(auto & m: sc.simplices<2>())
     {
         std::cout << m;
+    }
+    std::cout << std::endl;
+    simps = sc.simplicesToArray();
+    for(auto&& a: simps)
+    {
+        std::cout << a << " ";
     }
     std::cout << std::endl;
     writeSimplicialComplextoStream(sc,std::cout);

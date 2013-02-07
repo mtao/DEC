@@ -18,7 +18,7 @@ public:
     static const int Dim = DIM;
     typedef typename NumTraits::Vector Vector;
     typedef typename NumTraits::Scalar Scalar;
-    bool IsNegative( void )  const  { return (sign < 0); }
+    bool isNegative( void )  const  { return (sign < 0); }
     void Negate    ( void )         { sign = -sign; }
     void ResetSign ( void )         { sign = 1; }
 
@@ -84,7 +84,7 @@ public:
     friend inline std::ostream& operator<<(std::ostream& os, const Simplex<NT,Dim> & simplex)
     {
         os << "(" << simplex.Index() << ": ";
-        if(simplex.IsNegative())
+        if(simplex.isNegative())
         {
             os << "-";
         }
@@ -148,7 +148,7 @@ public:
     template <int Dim2>
     inline bool isSameSign( const Simplex<NT,Dim2>& other ) const
     {
-        return (this->IsNegative() == other.IsNegative());
+        return (this->isNegative() == other.isNegative());
     }
 
 

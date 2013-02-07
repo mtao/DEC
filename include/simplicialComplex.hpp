@@ -75,6 +75,26 @@ public:
 
         init();
     }
+
+    template <int M=Dim>
+    std::vector<Scalar> simplicesToArray() const
+    {
+        static_assert(M > 0 && M <= Dim, "Inappropriate dims asserted");
+        auto&& simplices = this->template constSimplices<M>();
+        std::vector<Scalar> ret(simplices.size() * (M+1));
+        for(auto&& s: simplices)
+        {
+            std::copy(s.getIndexSet().cbegin(),s.getIndexSet().cend(), ret.begin()+s.Index() * (M+1));
+            if(s.isNegative())
+            {
+                Scalar tmp =  ret[s.Index() * (M+1)+1];
+                ret[s.Index() * (M+1)+1] =  ret[s.Index() * (M+1)];
+                ret[s.Index() * (M+1)] =  tmp;
+            }
+        }
+        return ret;
+    }
+
     template <int M=Dim>
     const SparseMatrix & b() const{return SimplicialComplex<NT,M>::m_boundary;}
     template <int M=Dim>
@@ -498,7 +518,13 @@ void SimplicialComplex<NT,N>::finalize()
 }
 
 
+typedef SimplicialComplex<NumericalTraits<float, 3>, 2> TriangleMeshf;
+typedef SimplicialComplex<NumericalTraits<float, 3>, 3> TetrahedralMeshf;
+typedef SimplicialComplex<NumericalTraits<double, 3>, 2> TriangleMeshd;
+typedef SimplicialComplex<NumericalTraits<double, 3>, 3> TetrahedralMeshd;
+//Default to double :)
 typedef SimplicialComplex<NumericalTraits<double, 3>, 2> TriangleMesh;
+typedef SimplicialComplex<NumericalTraits<double, 3>, 3> TetrahedralMesh;
 
 
 

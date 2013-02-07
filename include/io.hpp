@@ -140,7 +140,7 @@ void writeSimplicialComplextoStream(const SimplicialComplex & sc, std::ostream &
     for(auto && s: sc.constSimplices())
     {
         os << "f ";
-        if(s.IsNegative()) {
+        if(s.isNegative()) {
             os << s[1]+1 << " " << s[0]+1 << " ";
         }
         else

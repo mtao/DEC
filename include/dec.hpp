@@ -68,9 +68,6 @@ class Form: public FormExpression<form_traits<Dim,Type1,-1,Type1,N1,true>, Dynam
                     (Traits1::TypeOut == Traits::TypeOut) &&
                     (Traits1::NOut == Traits::NOut)
                     , "Equality can't combine different forms");
-            std::cout << rhs.expr.rows() << " " << rhs.expr.cols() << std::endl;
-            std::cout << expr.rows() << " " << expr.cols() << std::endl;
-            //std::cout << "Data: " << expr.transpose() << std::endl;
         }
     private:
         //DynamicVector expr;
