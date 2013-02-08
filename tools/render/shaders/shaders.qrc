@@ -1,0 +1,10 @@
+<RCC>
+    <qresource prefix="/">
+        <file>shader.f.glsl</file>
+        <file>shader.v.glsl</file>
+        <file>shader.g.glsl</file>
+        <file>edgeshader.g.glsl</file>
+        <file>faceshader.g.glsl</file>
+        <file>vertshader.g.glsl</file>
+    </qresource>
+</RCC>

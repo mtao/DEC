@@ -36,10 +36,10 @@ GLint GLenum2size(GLenum type)
     }
     return 0;
 }
-ShaderProgram::ShaderProgram(): programId(glCreateProgram()), attributesBound(false)
+ShaderProgram::ShaderProgram(): programId(glCreateProgram())
 {
 }
-ShaderProgram::ShaderProgram(GLuint programId): programId(programId), attributesBound(false)
+ShaderProgram::ShaderProgram(GLuint programId): programId(programId)
 {
 }
 void ShaderProgram::init()
@@ -98,7 +98,7 @@ void ShaderProgram::release()
 
 VertexBufferObject::VertexBufferObject(GLvoid *data, GLsizei size, GLenum usage,
                                        int tupleSize, GLenum type, GLboolean normalized, GLsizei stride, GLvoid * offset):
-    tupleSize(tupleSize), type(type), normalized(normalized), stride(stride), offset(offset)
+    tupleSize(tupleSize), size(size), type(type), normalized(normalized), stride(stride), offset(offset)
 {
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);

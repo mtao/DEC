@@ -44,6 +44,7 @@ struct VertexBufferObject
     ~VertexBufferObject();
     GLuint vbo;
     int tupleSize;//Values stored redundantly between constructor but doesn't matter
+    int size;
     GLenum type;
     GLboolean normalized;
     GLsizei stride;
@@ -91,7 +92,7 @@ struct ShaderProgram
     void bind(bool bindAttributes=true);
     void release();
     GLuint programId;
-    bool attributesBound;
+    bool attributesBound=false;
     std::map<GLint, std::weak_ptr<VertexBufferObject> > attributes;
     //std::vector< VertexBufferObject> attributes;
     bool owner=true;

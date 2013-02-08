@@ -11,12 +11,27 @@
 struct MeshPackage {
     std::shared_ptr<VertexBufferObject> vertices;
     std::shared_ptr<VertexIndexObject> indices;
+    std::shared_ptr<VertexBufferObject> facevertices;
+    std::shared_ptr<VertexIndexObject> faceindices;
+    std::shared_ptr<VertexBufferObject> edgevertices;
+    std::shared_ptr<VertexIndexObject> edgeindices;
 };
 
+
+enum RenderType {RT_FACE=4, RT_VERT=1, RT_EDGE=2};
+
+struct FormPackage{
+    QString title;
+    RenderType type;
+    std::shared_ptr<VertexBufferObject> data;
+};
+
+class MainWindow;
 class GLWidget: public QGLWidget
 {
     Q_OBJECT
 public:
+    friend class MainWindow;
     GLWidget(QWidget * parent);
 protected:
     void paintGL();
@@ -26,14 +41,22 @@ protected:
     virtual void mouseReleaseEvent(QMouseEvent *event);
     virtual void mouseMoveEvent(QMouseEvent *event);
     virtual void wheelEvent(QWheelEvent * wheelEvent);
+    virtual void keyPressEvent(QKeyEvent *event);
 private:
+    void initShader(ShaderProgram & program, const QString & geotype);
+    GLuint compileShader(GLenum shaderType, const QString & fileName);
+    void renderForm(const FormPackage & form);
     QTimer* m_timer = 0;
+    RenderType m_renderType = RT_FACE;
     bool m_doRender = false;
     glm::mat4 mat_mvp, mat_mv, mat_m, mat_v, mat_p;
     float m_aspectRatio = 1;
-    std::shared_ptr<VertexBufferObject> m_vertices;
-    std::shared_ptr<VertexIndexObject> m_indices;
-    std::shared_ptr<VertexBufferObject> m_data;
+    std::unique_ptr<ShaderProgram> m_shader;
+    std::unique_ptr<ShaderProgram> m_vertshader;
+    std::unique_ptr<ShaderProgram> m_faceshader;
+    std::unique_ptr<ShaderProgram> m_edgeshader;
+    MeshPackage m_meshpackage;
+    std::map<QString, FormPackage> m_formpackages;
 
     QTime m_time;
     int m_lastTime = 0;
@@ -43,9 +66,10 @@ private:
     QVector3D m_rotation;
     QVector3D m_angularMomentum;
     QVector3D m_accumulatedMomentum;
-    public slots:
+public slots:
     void disableRendering(){m_doRender =false;}
     void enableRendering(){m_doRender = true;}
-    void receiveMesh(const MeshPackage & package);
+    void recieveMesh(const MeshPackage & package);
+    void recieveForm(const FormPackage & package);
 };
 #endif

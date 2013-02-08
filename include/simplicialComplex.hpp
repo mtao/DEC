@@ -4,6 +4,7 @@
 #include "simplex.hpp"
 #include <vector>
 #include <array>
+#include <algorithm>
 #include <set>
 
 //Input N-simplices to generate the whole simplicial complex
@@ -77,17 +78,18 @@ public:
     }
 
     template <int M=Dim>
-    std::vector<Scalar> simplicesToArray() const
+    std::vector<unsigned int> simplicesToArray() const
+
     {
         static_assert(M > 0 && M <= Dim, "Inappropriate dims asserted");
         auto&& simplices = this->template constSimplices<M>();
-        std::vector<Scalar> ret(simplices.size() * (M+1));
+        std::vector<unsigned int> ret(simplices.size() * (M+1));
         for(auto&& s: simplices)
         {
             std::copy(s.getIndexSet().cbegin(),s.getIndexSet().cend(), ret.begin()+s.Index() * (M+1));
             if(s.isNegative())
             {
-                Scalar tmp =  ret[s.Index() * (M+1)+1];
+                unsigned int tmp =  ret[s.Index() * (M+1)+1];
                 ret[s.Index() * (M+1)+1] =  ret[s.Index() * (M+1)];
                 ret[s.Index() * (M+1)] =  tmp;
             }
@@ -498,6 +500,7 @@ void SimplicialComplex<NT,N>::finalize()
         std::copy(m_simplexSet.begin(), m_simplexSet.end(), m_simplices.begin());
     }
     m_simplexSet.clear();
+    std::sort(m_simplices.begin(), m_simplices.end());
 
     for(auto&& s: m_simplices)
     {
