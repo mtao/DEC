@@ -1,6 +1,7 @@
 #include "../include/qtmainwindow.h"
 #include "../../../include/dec.hpp"
 #include "../../../include/io.hpp"
+#include "../../../include/util.hpp"
 #include <QMenu>
 #include <QMenuBar>
 #include <QAction>
@@ -33,20 +34,28 @@ MainWindow::MainWindow(QWidget * parent): QMainWindow(parent) {
 void MainWindow::openFile(const QString & filename) {
     MeshPackage package;
     //TODO: Memleak for now!!
-    std::unique_ptr<TriangleMeshf>mesh(readOBJtoSimplicialComplex<float>(filename.toStdString()));
-    auto&& verts = mesh->vertices();
+    std::unique_ptr<TriangleMeshf> mesh(readOBJtoSimplicialComplex<float>(filename.toStdString()));
+    DEC<TriangleMeshf> dec(*mesh);
+    typedef typename TriangleMeshf::Vector Vector;
+    const static int vecsize = sizeof(Vector)/sizeof(float);
+    std::vector<Vector> verts = mesh->vertices();//copy here so we can normalize coordinates
     auto&& packed_indices = mesh->simplicesToArray();
 
-    m_glwidget->makeCurrent();
+
+    mtao::normalizeInPlace(verts);//Normalize!!
+
+    m_glwidget->makeCurrent();//activate glwidget opengl context for creating buffer objects
     package.vertices.reset(new VertexBufferObject((void*)verts.data(),
-                                                  sizeof(TriangleMeshf::Vector)/sizeof(float) * verts.size(), GL_STATIC_DRAW));
+                                                  vecsize * verts.size(), GL_STATIC_DRAW));
     package.indices.reset(new VertexIndexObject((void*)packed_indices.data(), packed_indices.size(), GL_STATIC_DRAW, GL_TRIANGLES));
+
 
     int i;
 
-    std::remove_reference<decltype(verts)>::type faceverts(packed_indices.size());
+    decltype(verts) faceverts(packed_indices.size());
     std::vector<unsigned int> faceindices(packed_indices.size());
-    std::transform(packed_indices.cbegin(), packed_indices.cend(), faceverts.begin(), [&verts](const unsigned int ind)->decltype(faceverts)::value_type
+    std::transform(packed_indices.cbegin(), packed_indices.cend(), faceverts.begin(),
+                   [&verts](const unsigned int ind)->decltype(faceverts)::value_type
     {
         return verts[ind];
     });
@@ -57,11 +66,12 @@ void MainWindow::openFile(const QString & filename) {
         ind = i++;
     }
     package.facevertices.reset(new VertexBufferObject((void*)faceverts.data(),
-                                                  sizeof(TriangleMeshf::Vector)/sizeof(float) * faceverts.size(), GL_STATIC_DRAW));
+                                                  vecsize * faceverts.size(), GL_STATIC_DRAW));
     package.faceindices.reset(new VertexIndexObject((void*)faceindices.data(), faceindices.size(), GL_STATIC_DRAW, GL_TRIANGLES));
     auto&& packed_edge_indices = mesh->simplicesToArray<1>();
-    std::remove_reference<decltype(verts)>::type edgeverts(packed_edge_indices.size());
-    std::transform(packed_edge_indices.cbegin(), packed_edge_indices.cend(), edgeverts.begin(), [&verts](const unsigned int ind)->decltype(edgeverts)::value_type
+    decltype(verts) edgeverts(packed_edge_indices.size());
+    std::transform(packed_edge_indices.cbegin(), packed_edge_indices.cend(), edgeverts.begin(),
+                   [&verts](const unsigned int ind)->decltype(edgeverts)::value_type
     {
         return verts[ind];
     });
@@ -73,7 +83,7 @@ void MainWindow::openFile(const QString & filename) {
         ind = i++;
     }
     package.edgevertices.reset(new VertexBufferObject((void*)edgeverts.data(),
-                                                  sizeof(TriangleMeshf::Vector)/sizeof(float) * edgeverts.size(), GL_STATIC_DRAW));
+                                                  vecsize * edgeverts.size(), GL_STATIC_DRAW));
     package.edgeindices.reset(new VertexIndexObject((void*)edgeindices.data(), edgeindices.size(), GL_STATIC_DRAW, GL_LINES));
 
     emit meshLoaded(package);

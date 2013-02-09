@@ -26,6 +26,9 @@ SET(QTRENDER_SHADERS
     shaders/shader.v.glsl
     shaders/shader.f.glsl
     shaders/shader.g.glsl
+    shaders/faceshader.g.glsl
+    shaders/edgeshader.g.glsl
+    shaders/vertshader.g.glsl
     )
 #This target has an obvious purpose :)
 ADD_CUSTOM_TARGET(MAKE_SHADERS_VISIBLE_IN_QTCREATOR

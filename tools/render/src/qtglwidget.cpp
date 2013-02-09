@@ -177,8 +177,9 @@ void GLWidget::paintGL() {
     mat_mvp = mat_p * mat_v * mat_m;
 
 
-
     if(!m_meshpackage.indices) return;
+    /*
+
     ShaderProgram * shader;
     switch(m_renderType)
     {
@@ -197,18 +198,34 @@ void GLWidget::paintGL() {
     case RT_VERT: glDrawArrays(GL_POINTS, 0, m_meshpackage.vertices->size); break;
     }
     shader->release();
+    */
+    for(RenderType t: {RT_FACE, RT_EDGE, RT_VERT}) {
+        if(m_renderType & t) {
+            qWarning() << t;
+            render(t);
+        }
+    }
+    if(m_renderType == 0) {
+        render(RT_NONE);
+    }
 
 }
 
+std::unique_ptr<ShaderProgram> & GLWidget::shaderSelector(RenderType type) {
+
+    switch(type)
+    {
+    case RT_FACE: return m_faceshader;
+    case RT_EDGE: return m_edgeshader;
+    case RT_VERT: return m_vertshader;
+    case RT_NONE: return m_shader;
+    }
+}
+
+/*
 void GLWidget::renderForm(const FormPackage & form) {
 
-    ShaderProgram * shader;
-    switch(form.type)
-    {
-    case RT_FACE: shader = m_faceshader.get(); break;
-    case RT_EDGE: shader = m_edgeshader.get(); break;
-    case RT_VERT: shader = m_vertshader.get(); break;
-    }
+    ShaderProgram * shader = shaderSelector(form.type);
     shader->bind();
     glUniformMatrix4fv(glGetUniformLocation(shader->programId, "MVP"),
                        1, GL_FALSE, glm::value_ptr(mat_mvp));
@@ -223,6 +240,22 @@ void GLWidget::renderForm(const FormPackage & form) {
     }
     shader->release();
 }
+*/
+void GLWidget::render(RenderType type) {
+
+    auto&& shader = shaderSelector(type);
+    shader->bind();
+    glUniformMatrix4fv(glGetUniformLocation(shader->programId, "MVP"),
+                       1, GL_FALSE, glm::value_ptr(mat_mvp));
+    switch(type)
+    {
+    case RT_NONE: m_meshpackage.indices->render(); break;
+    case RT_FACE: m_meshpackage.faceindices->render(); break;
+    case RT_EDGE: m_meshpackage.edgeindices->render(); break;
+    case RT_VERT: glDrawArrays(GL_POINTS, 0, m_meshpackage.vertices->size); break;
+    }
+    shader->release();
+}
 
 
 
@@ -230,9 +263,9 @@ void GLWidget::renderForm(const FormPackage & form) {
 
 void GLWidget::keyPressEvent(QKeyEvent *event) {
     switch(event->key()) {
-    case Qt::Key_F: m_renderType = RT_FACE; break;
-    case Qt::Key_E: m_renderType = RT_EDGE; break;
-    case Qt::Key_V: m_renderType = RT_VERT; break;
+    case Qt::Key_F: m_renderType ^= RT_FACE; break;
+    case Qt::Key_E: m_renderType ^= RT_EDGE; break;
+    case Qt::Key_V: m_renderType ^= RT_VERT; break;
     default: return;
     }
     //If I haven't used the key I'll have already returned, so I should accept the input
@@ -280,3 +313,8 @@ void GLWidget::wheelEvent(QWheelEvent *event)
     update();
 }
 
+void GLWidget::enableForm(const QString &formname) {
+    auto&& form = m_formpackages[formname];
+    shaderSelector(form.type)->addAttribute("data", form.data);
+    m_renderType ^= form.type;
+}

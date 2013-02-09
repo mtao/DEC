@@ -18,7 +18,7 @@ struct MeshPackage {
 };
 
 
-enum RenderType {RT_FACE=4, RT_VERT=1, RT_EDGE=2};
+enum RenderType {RT_FACE=4, RT_VERT=1, RT_EDGE=2, RT_NONE=0};
 
 struct FormPackage{
     QString title;
@@ -45,9 +45,11 @@ protected:
 private:
     void initShader(ShaderProgram & program, const QString & geotype);
     GLuint compileShader(GLenum shaderType, const QString & fileName);
-    void renderForm(const FormPackage & form);
+    std::unique_ptr<ShaderProgram> & shaderSelector(RenderType type);
+    void render(RenderType type);
+    //    void renderForm(const FormPackage & form);
     QTimer* m_timer = 0;
-    RenderType m_renderType = RT_FACE;
+    int m_renderType = RT_FACE;
     bool m_doRender = false;
     glm::mat4 mat_mvp, mat_mv, mat_m, mat_v, mat_p;
     float m_aspectRatio = 1;
@@ -71,5 +73,6 @@ public slots:
     void enableRendering(){m_doRender = true;}
     void recieveMesh(const MeshPackage & package);
     void recieveForm(const FormPackage & package);
+    void enableForm(const QString & formname);
 };
 #endif
