@@ -39,6 +39,7 @@ MainWindow::MainWindow(QWidget * parent): QMainWindow(parent) {
 void MainWindow::openFile(const QString & filename) {
     MeshPackage package;
     std::unique_ptr<TriangleMeshf> mesh(readOBJtoSimplicialComplex<float>(filename.toStdString()));
+    std::cout << "Read a mesh with verts:faces: " << mesh->vertices().size()<< ":" << mesh->numSimplices() << std::endl;
     DEC<TriangleMeshf> dec(*mesh);
     std::default_random_engine generator;
     std::uniform_real_distribution<float> distrib(-1,1);

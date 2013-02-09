@@ -4,8 +4,6 @@
 #include <boost/algorithm/string.hpp>
 #include "simplicialComplex.hpp"
 #include <fstream>
-
-
 template <typename Scalar>
 SimplicialComplex<NumericalTraits<Scalar,3>,2> * readOBJtoSimplicialComplex(std::istream & is)
 {
@@ -59,7 +57,10 @@ SimplicialComplex<NumericalTraits<Scalar,3>,2> * readOBJtoSimplicialComplex(std:
                     boost::tokenizer< >::iterator tok_it = tok.begin();
                     if(tok_it!=tok.end())
                     {//vertex
-                        f[i] = atoi(tok_it->c_str())-1;
+                        int val = atoi(tok_it->c_str());
+                        if(val < 0)
+                            val = verts.size() - val;
+                        f[i]=val-1;
 #ifdef CHECK_FOR_ZERO_OBJ
                         minVertIndex=(minVertIndex>f[i]+1)?f[i]+1:minVertIndex;
 #endif
@@ -80,7 +81,10 @@ SimplicialComplex<NumericalTraits<Scalar,3>,2> * readOBJtoSimplicialComplex(std:
                         f[0]^=f[2];
                         f[2]^=f[0];
                         f[0]^=f[2];
-                        f[1] = atoi(tok_it->c_str())-1;
+                        int val = atoi(tok_it->c_str());
+                        if(val < 0)
+                            val = verts.size() - val;
+                        f[1]=val-1;
 #ifdef CHECK_FOR_ZERO_OBJ
                         minVertIndex=(minVertIndex>f[1]+1)?f[1]+1:minVertIndex;
 #endif
