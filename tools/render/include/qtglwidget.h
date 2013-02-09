@@ -32,7 +32,7 @@ class GLWidget: public QGLWidget
     Q_OBJECT
 public:
     friend class MainWindow;
-    GLWidget(QWidget * parent);
+    GLWidget(const QGLFormat&  format, QWidget * parent=0);
 protected:
     void paintGL();
     void resizeGL(int w, int h);
@@ -49,7 +49,7 @@ private:
     void render(RenderType type);
     //    void renderForm(const FormPackage & form);
     QTimer* m_timer = 0;
-    int m_renderType = RT_FACE;
+    int m_renderType = RT_NONE;
     bool m_doRender = false;
     glm::mat4 mat_mvp, mat_mv, mat_m, mat_v, mat_p;
     float m_aspectRatio = 1;

@@ -10,7 +10,7 @@
 #include <QFileInfo>
 #include <QDir>
 
-GLWidget::GLWidget(QWidget * parent): QGLWidget(parent), m_timer(new QTimer(this)) {
+GLWidget::GLWidget(const QGLFormat & format, QWidget * parent): QGLWidget(format, parent), m_timer(new QTimer(this)) {
 
     connect( m_timer, SIGNAL( timeout() ), SLOT( update() ) );
 
@@ -59,7 +59,7 @@ void GLWidget::initShader(ShaderProgram & program, const QString & geotype)
     QString vertexShaderPath(":/shader.v.glsl");
     QString fragmentShaderPath(":/shader.f.glsl");
     QString geometryShaderPath(tr(":/") + geotype + tr("shader.g.glsl"));
-    if(this->format().majorVersion() < 2) {
+    if(this->format().majorVersion() < 2 || (geotype != tr("") && geotype != tr("face"))) {
         vertexShaderPath = tr(":/shader.130.v.glsl");
         fragmentShaderPath = tr(":/shader.130.f.glsl");
         geometryShaderPath = tr("");//hopefully "" file won't exist
@@ -119,6 +119,7 @@ void GLWidget::initShader(ShaderProgram & program, const QString & geotype)
 GLuint GLWidget::compileShader(GLenum shaderType, const QString & fileName)
 {
 
+    qWarning() << fileName ;
     QFile file(fileName);
     if(!file.open(QIODevice::ReadOnly | QIODevice::Text))
     {
@@ -178,7 +179,8 @@ void GLWidget::paintGL() {
     mat_m = glm::rotate(mat_m, (float)m_rotation.x(), glm::vec3(1.f,0.f,0.f));
     mat_m = glm::rotate(mat_m, (float)m_rotation.y(), glm::vec3(0.f,1.f,0.f));
     mat_m = glm::rotate(mat_m, (float)m_rotation.z(), glm::vec3(0.f,0.f,1.f));
-    mat_mvp = mat_p * mat_v * mat_m;
+    mat_mv = mat_v * mat_m;
+    mat_mvp = mat_p * mat_mv;
 
 
     if(!m_meshpackage.indices) return;
@@ -248,6 +250,8 @@ void GLWidget::render(RenderType type) {
 
     auto&& shader = shaderSelector(type);
     shader->bind();
+    glUniformMatrix4fv(glGetUniformLocation(shader->programId, "MV"),
+                       1, GL_FALSE, glm::value_ptr(mat_mv));
     glUniformMatrix4fv(glGetUniformLocation(shader->programId, "MVP"),
                        1, GL_FALSE, glm::value_ptr(mat_mvp));
     switch(type)
@@ -319,5 +323,5 @@ void GLWidget::wheelEvent(QWheelEvent *event)
 void GLWidget::enableForm(const QString &formname) {
     auto&& form = m_formpackages[formname];
     shaderSelector(form.type)->addAttribute("data", form.data);
-    m_renderType ^= form.type;
+    //m_renderType ^= form.type;
 }
