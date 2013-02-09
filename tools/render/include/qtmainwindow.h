@@ -18,6 +18,7 @@ private:
     GLWidget * m_glwidget;
 signals:
     void meshLoaded(const MeshPackage & package);
+    void formLoaded(const FormPackage & package);
     void dataLoaded();
 };
 

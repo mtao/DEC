@@ -2,11 +2,13 @@
 #include "../../../include/dec.hpp"
 #include "../../../include/io.hpp"
 #include "../../../include/util.hpp"
+#include "../../../include/render.hpp"
 #include <QMenu>
 #include <QMenuBar>
 #include <QAction>
 #include <QFileDialog>
 #include <QDir>
+#include <iostream>
 //#include "glutil.h"
 
 MainWindow::MainWindow(QWidget * parent): QMainWindow(parent) {
@@ -28,18 +30,19 @@ MainWindow::MainWindow(QWidget * parent): QMainWindow(parent) {
     m_glwidget = new GLWidget(this);
     connect(this,SIGNAL(meshLoaded(const MeshPackage &))
             , m_glwidget,SLOT(recieveMesh(const MeshPackage &)));
+    connect(this,SIGNAL(formLoaded(const FormPackage &))
+            , m_glwidget,SLOT(recieveForm(const FormPackage &)));
     setCentralWidget(m_glwidget);
 }
 
 void MainWindow::openFile(const QString & filename) {
     MeshPackage package;
-    //TODO: Memleak for now!!
     std::unique_ptr<TriangleMeshf> mesh(readOBJtoSimplicialComplex<float>(filename.toStdString()));
     DEC<TriangleMeshf> dec(*mesh);
     typedef typename TriangleMeshf::Vector Vector;
     const static int vecsize = sizeof(Vector)/sizeof(float);
     std::vector<Vector> verts = mesh->vertices();//copy here so we can normalize coordinates
-    auto&& packed_indices = mesh->simplicesToArray();
+    auto&& packed_indices = mtao::template simplicesToRenderable<2>(*mesh);
 
 
     mtao::normalizeInPlace(verts);//Normalize!!
@@ -66,9 +69,9 @@ void MainWindow::openFile(const QString & filename) {
         ind = i++;
     }
     package.facevertices.reset(new VertexBufferObject((void*)faceverts.data(),
-                                                  vecsize * faceverts.size(), GL_STATIC_DRAW));
+                                                      vecsize * faceverts.size(), GL_STATIC_DRAW));
     package.faceindices.reset(new VertexIndexObject((void*)faceindices.data(), faceindices.size(), GL_STATIC_DRAW, GL_TRIANGLES));
-    auto&& packed_edge_indices = mesh->simplicesToArray<1>();
+    auto&& packed_edge_indices = mtao::simplicesToRenderable<1>(*mesh);
     decltype(verts) edgeverts(packed_edge_indices.size());
     std::transform(packed_edge_indices.cbegin(), packed_edge_indices.cend(), edgeverts.begin(),
                    [&verts](const unsigned int ind)->decltype(edgeverts)::value_type
@@ -83,10 +86,50 @@ void MainWindow::openFile(const QString & filename) {
         ind = i++;
     }
     package.edgevertices.reset(new VertexBufferObject((void*)edgeverts.data(),
-                                                  vecsize * edgeverts.size(), GL_STATIC_DRAW));
+                                                      vecsize * edgeverts.size(), GL_STATIC_DRAW));
     package.edgeindices.reset(new VertexIndexObject((void*)edgeindices.data(), edgeindices.size(), GL_STATIC_DRAW, GL_LINES));
 
     emit meshLoaded(package);
+    auto&& form2 = dec.template genForm<PRIMAL_FORM,2>();
+    for(int i=0; i < form2.expr.rows(); ++i)
+    {
+        form2.expr(i) = float(i)/form2.expr.rows()*2-1;
+    }
+    std::vector<std::array<float,3> > form2_ = mtao::formToRenderable(form2);
+
+    FormPackage fpackage  = {"Test2",RT_FACE, std::make_shared<VertexBufferObject>(
+                             (void*)form2_.data(),
+                             3*form2_.size(),
+                             GL_STATIC_DRAW,
+                             1
+                             )};
+    emit formLoaded(fpackage);
+    auto&& form1 = dec.template genForm<PRIMAL_FORM,1>();
+    for(int i=0; i < form1.expr.rows(); ++i)
+    {
+        form1.expr(i) = 1;
+    }
+    std::vector<std::array<float,2> > form1_ = mtao::formToRenderable(form1);
+    fpackage  = {"Test1",RT_EDGE, std::make_shared<VertexBufferObject>(
+                 form1_.data(),
+                 2*form1_.size(),
+                 GL_STATIC_DRAW,
+                 1
+                 )};
+    emit formLoaded(fpackage);
+    auto&& form0 = dec.template genForm<PRIMAL_FORM,0>();
+    for(int i=0; i < form0.expr.rows(); ++i)
+    {
+        form0.expr(i) = -1;
+    }
+    std::vector<std::array<float,1> > form0_ = mtao::formToRenderable(form0);
+    fpackage  = {"Test0",RT_VERT, std::make_shared<VertexBufferObject>(
+                 form0_.data(),
+                 1*form0_.size(),
+                 GL_STATIC_DRAW,
+                 1
+                 )};
+    emit formLoaded(fpackage);
 }
 
 void MainWindow::openFile() {

@@ -120,6 +120,7 @@ class FormFactory{
 protected:
     FormFactory(const Complex & sc): m_sc(sc) {}
 
+public:
     template <FormType Type, int N>
     Form<Complex::Dim, typename Complex::NumTraits::DynamicVector,Type,N> genForm()
     {

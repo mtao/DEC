@@ -15,11 +15,8 @@ GLWidget::GLWidget(QWidget * parent): QGLWidget(parent), m_timer(new QTimer(this
     connect( m_timer, SIGNAL( timeout() ), SLOT( update() ) );
 
     m_timer->start( 16 );
-    qWarning() << QResource::registerResource("../qrc_shaders.cxx");
+    QResource::registerResource("../qrc_shaders.cxx");
     QDir d(":/");
-    for(auto&& str: d.entryList()) {
-        qWarning() << str;
-    }
 
 }
 
@@ -54,12 +51,19 @@ void GLWidget::initializeGL() {
     initShader(*m_vertshader, "vert");
     initShader(*m_edgeshader, "edge");
 
+    glEnable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
 }
 void GLWidget::initShader(ShaderProgram & program, const QString & geotype)
 {
     QString vertexShaderPath(":/shader.v.glsl");
     QString fragmentShaderPath(":/shader.f.glsl");
     QString geometryShaderPath(tr(":/") + geotype + tr("shader.g.glsl"));
+    if(this->format().majorVersion() < 2) {
+        vertexShaderPath = tr(":/shader.130.v.glsl");
+        fragmentShaderPath = tr(":/shader.130.f.glsl");
+        geometryShaderPath = tr("");//hopefully "" file won't exist
+    }
     GLuint programId = program.programId;
     // First we load and compile the vertex shader...
     GLuint vertexId = compileShader(GL_VERTEX_SHADER, vertexShaderPath);
@@ -115,7 +119,6 @@ void GLWidget::initShader(ShaderProgram & program, const QString & geotype)
 GLuint GLWidget::compileShader(GLenum shaderType, const QString & fileName)
 {
 
-    qWarning() << fileName;
     QFile file(fileName);
     if(!file.open(QIODevice::ReadOnly | QIODevice::Text))
     {
@@ -158,6 +161,7 @@ void GLWidget::recieveMesh(const MeshPackage &package) {
 
 void GLWidget::recieveForm(const FormPackage &package) {
     m_formpackages[package.title] = package;
+    enableForm(package.title);//TODO: make an interface for enabling/disabling forms instead of rendering the last n-form we've seen
 }
 
 
@@ -201,7 +205,6 @@ void GLWidget::paintGL() {
     */
     for(RenderType t: {RT_FACE, RT_EDGE, RT_VERT}) {
         if(m_renderType & t) {
-            qWarning() << t;
             render(t);
         }
     }

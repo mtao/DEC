@@ -2,6 +2,7 @@
 #include "simplicialComplex.hpp"
 #include "io.hpp"
 #include "dec.hpp"
+#include "render.hpp"
 int main()
 {
     typedef Eigen::Vector3d V;
@@ -38,7 +39,7 @@ int main()
         std::cout << m;
     }
     std::cout << std::endl;
-    auto simps = sc.simplicesToArray<1>();
+    auto simps = mtao::simplicesToRenderable<1>(sc);
     for(auto&& a: simps)
     {
         std::cout << a << " ";
@@ -50,7 +51,7 @@ int main()
         std::cout << m;
     }
     std::cout << std::endl;
-    simps = sc.simplicesToArray();
+    simps = mtao::simplicesToRenderable<2>(sc);
     for(auto&& a: simps)
     {
         std::cout << a << " ";

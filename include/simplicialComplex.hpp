@@ -77,25 +77,6 @@ public:
         init();
     }
 
-    template <int M=Dim>
-    std::vector<unsigned int> simplicesToArray() const
-
-    {
-        static_assert(M > 0 && M <= Dim, "Inappropriate dims asserted");
-        auto&& simplices = this->template constSimplices<M>();
-        std::vector<unsigned int> ret(simplices.size() * (M+1));
-        for(auto&& s: simplices)
-        {
-            std::copy(s.getIndexSet().cbegin(),s.getIndexSet().cend(), ret.begin()+s.Index() * (M+1));
-            if(s.isNegative())
-            {
-                unsigned int tmp =  ret[s.Index() * (M+1)+1];
-                ret[s.Index() * (M+1)+1] =  ret[s.Index() * (M+1)];
-                ret[s.Index() * (M+1)] =  tmp;
-            }
-        }
-        return ret;
-    }
 
     template <int M=Dim>
     const SparseMatrix & b() const{return SimplicialComplex<NT,M>::m_boundary;}

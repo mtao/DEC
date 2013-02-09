@@ -131,7 +131,7 @@ template <typename SimplicialComplex>
 void writeSimplicialComplextoStream(const SimplicialComplex & sc, std::ostream & os)
 {
     static_assert(SimplicialComplex::Dim > 0, "No point in pulling from a 0 complex...");
-    const unsigned int Dim = SimplicialComplex::NumTraits::Dim;
+    const int Dim = SimplicialComplex::NumTraits::Dim;
 
     for(auto && v: sc.constVertices())
     {

@@ -6,5 +6,7 @@
         <file>edgeshader.g.glsl</file>
         <file>faceshader.g.glsl</file>
         <file>vertshader.g.glsl</file>
+        <file>shader.130.v.glsl</file>
+        <file>shader.130.f.glsl</file>
     </qresource>
 </RCC>
