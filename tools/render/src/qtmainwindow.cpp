@@ -9,6 +9,7 @@
 #include <QFileDialog>
 #include <QDir>
 #include <iostream>
+#include <Eigen/SparseCholesky>
 //#include "glutil.h"
 
 MainWindow::MainWindow(QWidget * parent): QMainWindow(parent) {
@@ -34,11 +35,25 @@ MainWindow::MainWindow(QWidget * parent): QMainWindow(parent) {
             , m_glwidget,SLOT(recieveForm(const FormPackage &)));
     setCentralWidget(m_glwidget);
 }
-
+#include <random>
 void MainWindow::openFile(const QString & filename) {
     MeshPackage package;
     std::unique_ptr<TriangleMeshf> mesh(readOBJtoSimplicialComplex<float>(filename.toStdString()));
     DEC<TriangleMeshf> dec(*mesh);
+    std::default_random_engine generator;
+    std::uniform_real_distribution<float> distrib(-1,1);
+    auto&& form2 = dec.template genForm<PRIMAL_FORM,2>();
+    for(int i=0; i < form2.expr.rows(); ++i)//random data
+        form2.expr(i) = distrib(generator);
+
+    auto dhdh = dec.d(dec.h(dec.d(dec.template h<2>()))).expr.eval();
+    typename Eigen::SimplicialLDLT<decltype(dhdh)> chol;
+    chol.compute(dhdh);
+    Eigen::VectorXf ret = chol.solve(form2.expr);//solve poisson problem
+    form2.expr = ret;
+    auto&& form1 = dec.template genForm<PRIMAL_FORM,1>();
+    form1 = dec.h(dec.d(dec.h(form2)));//apply codifferential operator
+
     typedef typename TriangleMeshf::Vector Vector;
     const static int vecsize = sizeof(Vector)/sizeof(float);
     std::vector<Vector> verts = mesh->vertices();//copy here so we can normalize coordinates
@@ -90,11 +105,8 @@ void MainWindow::openFile(const QString & filename) {
     package.edgeindices.reset(new VertexIndexObject((void*)edgeindices.data(), edgeindices.size(), GL_STATIC_DRAW, GL_LINES));
 
     emit meshLoaded(package);
-    auto&& form2 = dec.template genForm<PRIMAL_FORM,2>();
-    for(int i=0; i < form2.expr.rows(); ++i)
-    {
-        form2.expr(i) = float(i)/form2.expr.rows()*2-1;
-    }
+
+    //dhdh.ldlt().solveInPlace(form2.expr);
     std::vector<std::array<float,3> > form2_ = mtao::formToRenderable(form2);
 
     FormPackage fpackage  = {"Test2",RT_FACE, std::make_shared<VertexBufferObject>(
@@ -104,11 +116,6 @@ void MainWindow::openFile(const QString & filename) {
                              1
                              )};
     emit formLoaded(fpackage);
-    auto&& form1 = dec.template genForm<PRIMAL_FORM,1>();
-    for(int i=0; i < form1.expr.rows(); ++i)
-    {
-        form1.expr(i) = 1;
-    }
     std::vector<std::array<float,2> > form1_ = mtao::formToRenderable(form1);
     fpackage  = {"Test1",RT_EDGE, std::make_shared<VertexBufferObject>(
                  form1_.data(),

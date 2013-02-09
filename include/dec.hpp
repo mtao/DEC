@@ -156,24 +156,33 @@ protected:
         : Parent(sc)
         , m_d_primal(sc.template b<D+1>().transpose())
         , m_d_dual(sc.template b<TmD>())
-        , m_hodge_primal(sc.template numSimplices<D>())
-        , m_hodge_dual(sc.template numSimplices<D>())
+        , m_hodge_primal(
+              SparseMatrixColMajor(sc.template numSimplices<D>(),
+              sc.template numSimplices<D>())
+                         )
+        , m_hodge_dual(
+              SparseMatrixColMajor(sc.template numSimplices<D>(),
+              sc.template numSimplices<D>())
+                       )
     {
         for(auto&& s: sc.template constSimplices<D>())
-        {
+        {/*
             m_hodge_primal.data().diagonal()(s.Index()) = s.DualVolume() / s.Volume();
-            m_hodge_dual.data().diagonal()(s.Index()) = ((D*(TmD)%2==0)?1:-1)*s.Volume() / s.DualVolume();
+            m_hodge_dual.data().diagonal()(s.Index()) = s.Volume() / s.DualVolume();
+            */
+            m_hodge_primal.data().coeffRef(s.Index(),s.Index()) = s.DualVolume() / s.Volume();
+            m_hodge_dual.data().coeffRef(s.Index(),s.Index()) = s.Volume() / s.DualVolume();
         }
 
     }
 
 protected://Data
     FormOperator<form_traits<TopD,PRIMAL_FORM,D,PRIMAL_FORM,D+1>,SparseMatrixColMajor> m_d_primal;
-    FormOperator<form_traits<TopD,DUAL_FORM,TmD,DUAL_FORM,TmD+1>,const SparseMatrixColMajor &> m_d_dual;
+    FormOperator<form_traits<TopD,DUAL_FORM,D,DUAL_FORM,D+1>, const SparseMatrixColMajor & > m_d_dual;
 
     //SparseMatrixColMajor m_d;
-    FormOperator<form_traits<TopD,PRIMAL_FORM,D,DUAL_FORM,TmD>, DiagonalMatrix> m_hodge_primal;//primal D -> dual TmD
-    FormOperator<form_traits<TopD,DUAL_FORM,TmD,PRIMAL_FORM,D>, DiagonalMatrix> m_hodge_dual;//dual TmD -> primal D
+    FormOperator<form_traits<TopD,PRIMAL_FORM,D,DUAL_FORM,TmD>, SparseMatrixColMajor> m_hodge_primal;//primal D -> dual TmD
+    FormOperator<form_traits<TopD,DUAL_FORM,TmD,PRIMAL_FORM,D>, SparseMatrixColMajor> m_hodge_dual;//dual TmD -> primal D
 
     /*
            template <FormType Type>
@@ -193,7 +202,7 @@ private:
     auto  internal_h(dual_tag) const
     -> const decltype(m_hodge_dual) &
     {
-        return m_d_dual;
+        return m_hodge_dual;
     }
     auto internal_d(primal_tag) const
     -> const decltype(m_d_primal) &
@@ -203,7 +212,10 @@ private:
     auto  internal_d(dual_tag) const
     -> const decltype(m_d_dual) &
     {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wreturn-stack-address"
         return m_d_dual;
+#pragma GCC diagnostic pop
     }
 protected:
     template <FormType Type>
@@ -228,23 +240,32 @@ class HiddenOperatorContainer<Complex_,0>{
     typedef typename NumTraits::SparseMatrixColMajor SparseMatrixColMajor;
 protected:
     HiddenOperatorContainer(const Complex_ & sc)
-        : m_d_dual(sc.template b<Complex_::Dim>())
-        , m_hodge_primal(sc.template numSimplices<Complex_::Dim>())
-        , m_hodge_dual(sc.template numSimplices<Complex_::Dim>())
+        // : m_d_dual(sc.template b<Complex_::Dim>())
+        : m_hodge_primal(
+              SparseMatrixColMajor(sc.template numSimplices<Complex_::Dim>(),
+              sc.template numSimplices<Complex_::Dim>())
+                         )
+        , m_hodge_dual(
+              SparseMatrixColMajor(sc.template numSimplices<0>(),
+              sc.template numSimplices<Complex_::Dim>())
+                       )
     {
         for(auto&& s: sc.template constSimplices<Complex_::Dim>())
-        {
+        {/*
             m_hodge_primal.data().diagonal()(s.Index()) = s.DualVolume() / s.Volume();
             m_hodge_dual.data().diagonal()(s.Index()) = s.Volume() / s.DualVolume();
+            */
+            m_hodge_primal.data().coeffRef(s.Index(),s.Index()) = s.DualVolume() / s.Volume();
+            m_hodge_dual.data().coeffRef(s.Index(),s.Index()) = s.Volume() / s.DualVolume();
         }
     }
 protected:
 
 protected:
-    bool m_d_primal=false;
-    FormOperator<form_traits<Complex_::Dim,DUAL_FORM,0,DUAL_FORM,1>,const SparseMatrixColMajor &> m_d_dual;
-    FormOperator<form_traits<Complex_::Dim,PRIMAL_FORM,0,DUAL_FORM,Complex_::Dim>, DiagonalMatrix> m_hodge_primal;//primal D -> dual TmD
-    FormOperator<form_traits<Complex_::Dim,DUAL_FORM,Complex_::Dim,PRIMAL_FORM,0>, DiagonalMatrix> m_hodge_dual;//dual TmD -> primal D
+    //bool m_d_primal=false;
+    //FormOperator<form_traits<Complex_::Dim,DUAL_FORM,0,DUAL_FORM,1>,const SparseMatrixColMajor> m_d_dual;
+    FormOperator<form_traits<Complex_::Dim,PRIMAL_FORM,Complex_::Dim,DUAL_FORM,0>, SparseMatrixColMajor> m_hodge_primal;//primal D -> dual TmD
+    FormOperator<form_traits<Complex_::Dim,DUAL_FORM,0,PRIMAL_FORM,Complex_::Dim>, SparseMatrixColMajor> m_hodge_dual;//dual TmD -> primal D
 private:
     auto internal_h(primal_tag) const
     -> const decltype(m_hodge_primal) &
@@ -255,7 +276,7 @@ private:
     -> const decltype(m_hodge_dual) &
     {
         return m_hodge_dual;
-    }
+    }/*
     auto internal_d(primal_tag) const//this will always fail if you do anything with the returned operator... should change it to an assert later though
     -> const decltype(m_d_primal) &
     {
@@ -265,14 +286,15 @@ private:
     -> const decltype(m_d_dual) &
     {
         return m_d_dual;
-    }
+    }*/
 protected:
+    /*
     template <FormType Type>
     auto internal_d() const
     -> const typename std::conditional<Type==PRIMAL_FORM, decltype(m_d_primal), decltype(m_d_dual) >::type &
     {
         return internal_d(typename std::conditional<Type==PRIMAL_FORM, primal_tag, dual_tag>::type());
-    }
+    }*/
     template <FormType Type>
     auto internal_h() const
     -> const typename std::conditional<Type==PRIMAL_FORM, decltype(m_hodge_primal), decltype(m_hodge_dual) >::type &
@@ -317,8 +339,8 @@ private:
 public:
     template <int N, FormType Form = PRIMAL_FORM>
     auto d()const
-    -> decltype(dynamic_cast<const HiddenOperatorContainer<Complex_,(Form==PRIMAL_FORM)?Dim-N:N> *>(this)->template internal_d<Form>())
-    {    return dynamic_cast<const HiddenOperatorContainer<Complex_,(Form==PRIMAL_FORM)?Dim-N:N> *>(this)->template internal_d<Form>();}
+    -> decltype(dynamic_cast<const HiddenOperatorContainer<Complex_,Dim-N> *>(this)->template internal_d<Form>())
+    {    return dynamic_cast<const HiddenOperatorContainer<Complex_,Dim-N> *>(this)->template internal_d<Form>();}
 
 
 
