@@ -1,8 +1,8 @@
-#include "../include/qtmainwindow.h"
 #include "../../../include/dec.hpp"
 #include "../../../include/io.hpp"
 #include "../../../include/util.hpp"
 #include "../../../include/render.hpp"
+#include "../include/qtmainwindow.h"
 #include <QMenu>
 #include <QMenuBar>
 #include <QAction>
@@ -12,6 +12,8 @@
 #include <iostream>
 #include <random>
 #include <Eigen/SparseCholesky>
+#include <Eigen/IterativeLinearSolvers>
+//#include <Eigen/CholmodSupport>
 //#include "glutil.h"
 
 MainWindow::MainWindow(QWidget * parent): QMainWindow(parent) {
@@ -112,6 +114,14 @@ void MainWindow::openFile(const QString & filename) {
     m_2form = m_dec->template genForm<PRIMAL_FORM,2>();
     m_2form.expr = decltype(m_2form.expr)::Zero(m_2form.expr.rows());
 }
+
+
+
+
+
+
+
+
 void MainWindow::randomData() {
     if(!m_dec || !m_mesh) {return;}
     auto&& form2 = m_dec->template genForm<PRIMAL_FORM,2>();
@@ -123,61 +133,34 @@ void MainWindow::randomData() {
 
 
 
-    typename Eigen::SimplicialLDLT<decltype(dhdh)> chol;
+    //typename Eigen::SimplicialLDLT<decltype(dhdh)> chol;
+    typename Eigen::ConjugateGradient<decltype(dhdh), Eigen::Lower, typename Eigen::SimplicialLDLT<decltype(dhdh)> > chol;
+    //typename Eigen::ConjugateGradient<decltype(dhdh), Eigen::Lower, typename Eigen::CholmodBaseSupernodalLLT<decltype(dhdh)> > chol;
     chol.compute(dhdh);
     if(chol.info() != Eigen::Success)
     {
         std::cout << "Failed at dec->mposition" << std::endl;
     }
-    //Eigen::VectorXf ret = chol.solve(form2.expr);//solve poisson problem
     Eigen::VectorXf ret = chol.solve(m_2form.expr);//solve poisson problem
     if(chol.info() != Eigen::Success)
     {
         std::cout << "Failed at solving" << std::endl;
     }
+    std::cout << "Norm error: " << (dhdh* ret - m_2form.expr).norm() << std::endl;
     form2.expr = ret;
     auto&& form1 = m_dec->template genForm<PRIMAL_FORM,1>();
     form1 = m_dec->h(m_dec->d(m_dec->h(form2)));//apply codifferential operator
-    form1.expr /= form1.expr.template lpNorm<Eigen::Infinity>();
-    //form2.expr/= (form2.expr.template lpNorm<Eigen::Infinity>()) /2;
     m_2form = form2;
-    //m_2form.expr = dhdh * m_2form.expr;
 
-    //form2.expr/= (form2.expr.template lpNorm<Eigen::Infinity>());
-    //form2 = m_2form;
+    m_glwidget->recieveForm(mtao::makeFormPackage("Test2",form2));
+    m_glwidget->recieveForm(mtao::makeFormPackage("Test1",form1));
 
-
-    //dhdh.ldlt().solveInPlace(form2.expr);
-    std::vector<std::array<float,3> > form2_ = mtao::formToRenderable(form2);
-
-    FormPackage fpackage  = {"Test2",RT_FACE, std::make_shared<VertexBufferObject>(
-                             (void*)form2_.data(),
-                             3*form2_.size(),
-                             GL_STATIC_DRAW,
-                             1
-                             )};
-    m_glwidget->recieveForm(fpackage);
-    std::vector<std::array<float,2> > form1_ = mtao::formToRenderable(form1);
-    fpackage  = {"Test1",RT_EDGE, std::make_shared<VertexBufferObject>(
-                 form1_.data(),
-                 2*form1_.size(),
-                 GL_STATIC_DRAW,
-                 1
-                 )};
-    m_glwidget->recieveForm(fpackage);
     auto&& form0 = m_dec->template genForm<PRIMAL_FORM,0>();
     for(int i=0; i < form0.expr.rows(); ++i)
     {
         form0.expr(i) = -1;
     }
-    std::vector<std::array<float,1> > form0_ = mtao::formToRenderable(form0);
-    fpackage  = {"Test0",RT_VERT, std::make_shared<VertexBufferObject>(
-                 form0_.data(),
-                 1*form0_.size(),
-                 GL_STATIC_DRAW,
-                 1
-                 )};
-    m_glwidget->recieveForm(fpackage);
+    m_glwidget->recieveForm(mtao::makeFormPackage("Test0",form0));
 }
 
 void MainWindow::openFile() {
@@ -198,7 +181,6 @@ void MainWindow::openFile() {
 void MainWindow::keyPressEvent(QKeyEvent *event) {
     static std::default_random_engine generator;
     FormPackage fpackage;
-        std::vector<std::array<float,3> > m_2form_;
         std::uniform_int_distribution<int> rand;
     switch(event->key()) {
     case Qt::Key_R:
@@ -206,18 +188,11 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
         break;
     case Qt::Key_T:
         m_2form.expr = decltype(m_2form.expr)::Zero(m_2form.expr.rows());
-        rand = std::uniform_int_distribution<int>(0,m_2form.expr.rows());
+        rand = std::uniform_int_distribution<int>(0,m_2form.expr.rows()-1);
         for(int i=0; i < rand(generator); ++i)
         m_2form.expr(rand(generator)) = 1;
-        m_2form_ = mtao::formToRenderable(m_2form);
 
-        fpackage  = {"Test2",RT_FACE, std::make_shared<VertexBufferObject>(
-                                 (void*)m_2form_.data(),
-                                 3*m_2form_.size(),
-                                 GL_STATIC_DRAW,
-                                 1
-                                 )};
-        m_glwidget->recieveForm(fpackage);
+    m_glwidget->recieveForm(mtao::makeFormPackage("Test2",m_2form));
         break;
 
     default:

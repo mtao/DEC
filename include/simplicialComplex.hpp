@@ -428,6 +428,11 @@ int SimplicialComplex<NT,N>::createBoundary(NSimplex& simplex)
 void SimplicialComplex<NT,N>::init()
 {
     int index=0;
+    /*
+    std::sort(m_simplices.begin(), m_simplices.end(), [](const NSimplex & a, const NSimplex & b) -> bool{
+            return a.Index() < b.Index();
+            });
+            */
     std::sort(m_simplices.begin(), m_simplices.end());
     //std::unique leaves the iterator at the end to do erase to the end
     m_simplices.erase(std::unique(m_simplices.begin(), m_simplices.end()), m_simplices.end());
