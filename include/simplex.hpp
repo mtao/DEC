@@ -6,23 +6,26 @@
 
 
 
-template <typename NT, int N>
-class SimplicialComplex;
+template <typename NT, typename DT>
+class SimplicialComplexPrivate;
+template <typename NT, typename DT>
+class SimplicialComplexPrivateBase;
 
-template <typename NT, int DIM=NT::N>
+template <typename NT, typename DT>
 class Simplex
 {
 public:
-    friend class SimplicialComplex<NT,DIM>;
+    friend class SimplicialComplexPrivate<NT,DT>;
+    friend class SimplicialComplexPrivateBase<NT,DT>;
     typedef NT NumTraits;
-    static const int Dim = DIM;
+    static const int Dim = DT::Dim;
     typedef typename NumTraits::Vector Vector;
     typedef typename NumTraits::Scalar Scalar;
     bool isNegative( void )  const  { return (sign < 0); }
     void Negate    ( void )         { sign = -sign; }
     void ResetSign ( void )         { sign = 1; }
 
-    static int N() {return Dim;}
+    const static int N() {return Dim;}
     inline int Index     ( void )  const  { return index; }
     inline void setIndex(int i)              { index = i;}
     inline const mtao::IndexSet<Dim+1> & getIndexSet() const {return v;}
@@ -81,7 +84,7 @@ public:
     unsigned int& operator[] (int i) {
         return v[i];
     }
-    friend inline std::ostream& operator<<(std::ostream& os, const Simplex<NT,Dim> & simplex)
+    friend inline std::ostream& operator<<(std::ostream& os, const Simplex<NT,DT> & simplex)
     {
         os << "(" << simplex.Index() << ": ";
         if(simplex.isNegative())
@@ -115,54 +118,55 @@ protected:
      */
 public:
 
-    inline bool operator==(  const Simplex<NT,Dim>& other ) const
+    inline bool operator==(  const Simplex<NT,DT>& other ) const
     {
         return this->getIndexSet() == other.getIndexSet();
     }
 
-    inline bool operator!=(  const Simplex<NT,Dim>& other ) const
+    inline bool operator!=(  const Simplex<NT,DT>& other ) const
     {
         return (!(*this == other));
     }
 
-    inline bool operator<(  const Simplex<NT,Dim>& other ) const
+    inline bool operator<(  const Simplex<NT,DT>& other ) const
     {
         return this->getIndexSet() < other.getIndexSet();
     }
 
-    inline bool operator>(  const Simplex<NT,Dim>& other ) const
+    inline bool operator>(  const Simplex<NT,DT>& other ) const
     {
         return (other < *this);
     }
 
-    inline bool operator<=(  const Simplex<NT,Dim>& other ) const
+    inline bool operator<=(  const Simplex<NT,DT>& other ) const
     {
         return (!(other < this));
     }
 
-    inline bool operator>=(  const Simplex<NT,Dim>& other ) const
+    inline bool operator>=(  const Simplex<NT,DT>& other ) const
     {
         return (!(*this < other));
     }
 
-    template <int Dim2>
-    inline bool isSameSign( const Simplex<NT,Dim2>& other ) const
+    template <typename DT2>
+    inline bool isSameSign( const Simplex<NT,DT2>& other ) const
     {
         return (this->isNegative() == other.isNegative());
     }
 
 
 };
-template<typename NT, int N>
-inline Simplex<NT,N> operator-( const Simplex<NT,N>& simplex )
+template<typename NT, typename DT>
+inline Simplex<NT,DT> operator-( const Simplex<NT,DT>& simplex )
 {
-    Simplex<NT,N> negated( simplex );
+    Simplex<NT,DT> negated( simplex );
     negated.Negate();
     return negated;
 }
 
 
 
+/*
 template <typename NT>
 inline Simplex<NT,0> MakeSimplex( int v0 )
 {
@@ -190,5 +194,6 @@ inline Simplex<NT,3> MakeSimplex( int v0, int v1, int v2, int v3 )
     int v[4] = {v0, v1, v2, v3};
     return Simplex<NT,3>( v, false );
 }
+*/
 
 #endif

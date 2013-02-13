@@ -6,6 +6,7 @@
 #include <array>
 #include <algorithm>
 #include <set>
+#include <iostream>
 
 //Input N-simplices to generate the whole simplicial complex
 //Assumes that the input mesh of simplices is manifold
@@ -20,13 +21,153 @@ constexpr int cefactorial(int n)
     return n > 0 ? n * cefactorial(n-1):1;
 }
 };
-template <typename NT, int N>
-class SimplicialComplex: public SimplicialComplex<NT,N-1>
+template <int Top_, int Dim_>
+struct DimTraits {
+    const static int Top = Top_;
+    const static int Dim = Dim_;
+    typedef DimTraits<Top,Dim-1> LowerTraits;
+    typedef DimTraits<Top,Dim+1> UpperTraits;
+    typedef DimTraits<Top,Top> TopTraits;
+    typedef DimTraits<Top,0> BottomTraits;
+};
+//A 0-simplicial complex only manages
+//the vertices and some trivalish set of simplices.  vertices without any higher order
+//information are considered bad data and though stored here, they do not have simplices
+//associated with them.
+template <typename NT, typename DT>
+class SimplicialComplexPrivateBase
 {
 public:
+    template <int M>
+    struct SCParent{
+        typedef typename std::enable_if<M==0
+        , SimplicialComplexPrivateBase<NT,DimTraits<DT::Top, M> > >::type type;
+    };
     typedef NT NumTraits;
-    static const int Dim = N;
-    virtual int TopDim() const { return Dim; }
+    static const int Dim = 0;
+    static const int TopDim = DT::Top;
+    static const int EmbeddedDim = NT::Dim;
+    typedef typename NumTraits::Vector Vector;
+    typedef typename NumTraits::Scalar Scalar;
+    typedef typename NumTraits::Triplet Triplet;
+    typedef typename NumTraits::DiagonalMatrix DiagonalMatrix;
+    typedef Simplex<NumTraits,DT> NSimplex;
+
+
+    SimplicialComplexPrivateBase() {}
+    SimplicialComplexPrivateBase(const std::vector<Vector> & vertices)
+    {
+        m_vertices=vertices;
+    }
+
+    SimplicialComplexPrivateBase(const std::vector<NSimplex >& simplices, const std::vector<Vector> & vertices)
+    {
+        m_simplices = simplices;
+        m_vertices=vertices;
+    }
+    std::vector<Vector> & vertices(){return m_vertices;}
+    const std::vector<Vector> & constVertices()const{return m_vertices;}
+    template <int M=0>
+    const DiagonalMatrix & interior() const
+    {return SimplicialComplexPrivateBase<NT,typename SCParent<M>::type >::m_interior;}
+
+public://protected:
+    void init() {}
+    void finalize()
+    {
+        m_simplices.resize(m_simplexSet.size());
+        m_interior.resize(m_simplexSet.size());
+        m_interior.setIdentity();
+        std::copy(m_simplexSet.begin(), m_simplexSet.end(), m_simplices.begin());
+        for(auto&& s: m_simplices)
+        {
+            computeVolume(s);
+            computeCircumcenter(s);
+        }
+        for(int i=0; i < m_simplices.size(); ++i) {
+            m_indexToSimplex[m_simplices[i].Index()] = i;
+        }
+    }
+    int add(NSimplex & simplex)
+    {
+        simplex.setIndex(-1);
+        typename std::set<NSimplex>::const_iterator it = m_simplexSet.find(simplex);
+        if(it == m_simplexSet.end())
+        {
+            simplex.setIndex(m_simplexSet.size());
+            //m_simplices.push_back(simplex);
+            m_simplexSet.insert(simplex);
+            return simplex.Index();
+        }
+        else
+        {
+            return it->Index();
+        }
+    }
+    void computeVolume(NSimplex & s)
+    {
+        s.volume = 1;
+    }
+    void computeCircumcenter(NSimplex & s)
+    {
+        s.center = m_vertices[s.Index()];
+    }
+    template <int M=0>
+    typename SCParent<M>::NSimplex & simplexByIndex(int ind) {
+        return SCParent<M>::m_simplices[
+            SCParent<M>::m_indexToSimplex[ind]
+            ];
+    }
+
+    void genDualVolume(NSimplex & s, std::vector<Vector> & clist)
+    {
+        clist[0] = s.center;
+        int M = EmbeddedDim;
+        typename NumTraits::DynamicMatrix m(M,clist.size()-1);
+        auto&& origin = clist.back();
+        for(int i=0; i < static_cast<int>(clist.size())-1; ++i)
+        {
+            m.col(i) = this->m_vertices[i] - origin;
+        }
+        s.dualVolume += std::sqrt((m.transpose()*m).determinant())/mtao::cefactorial(TopDim-1);
+    }
+    void setInterior(int index)
+    {
+        m_interior.diagonal()(index)=0;
+    }
+
+protected:
+    std::vector<NSimplex > m_simplices;
+    DiagonalMatrix m_interior;
+    std::vector<Vector> m_vertices;
+    std::set<NSimplex> m_simplexSet;
+    std::map<int,int> m_indexToSimplex;
+
+};
+template <typename NT, typename DT>
+class SimplicialComplexPrivate: public
+        std::conditional<!std::is_same<DT,typename DT::BottomTraits::UpperTraits>::value
+        ,SimplicialComplexPrivate<NT,typename DT::LowerTraits>
+        , SimplicialComplexPrivateBase<NT,typename DT::BottomTraits>
+        >::type
+{
+public:
+    template <int M>
+    struct SCParent{
+        typedef typename std::conditional<M==0
+        , SimplicialComplexPrivateBase<NT,DimTraits<DT::Top, M> >
+        , SimplicialComplexPrivate<NT,DimTraits<DT::Top, M> >
+        >::type type;
+    };
+    template <int M>
+    struct LocalDT{
+        typedef DimTraits<DT::Top,M> type;
+    };
+    typedef NT NumTraits;
+    typedef DT DimTraits;
+    static const int Dim = DimTraits::Dim;
+    static const int N = DimTraits::Dim;
+    static const int TopDim = DimTraits::Top;
     static const int EmbeddedDim = NT::Dim;
     typedef typename NumTraits::Vector Vector;
     typedef typename NumTraits::Scalar Scalar;
@@ -34,18 +175,18 @@ public:
     typedef typename NumTraits::SparseMatrix SparseMatrix;
     typedef typename NumTraits::DiagonalMatrix DiagonalMatrix;
     typedef typename NumTraits::SparseMatrixColMajor SparseMatrixColMajor;
-    typedef  Simplex<NumTraits, N> NSimplex;
-    SimplicialComplex() {}
-    SimplicialComplex(const std::vector<NSimplex > & simplices, const std::vector<Vector> & vertices)
+    typedef  Simplex<NumTraits, DT> NSimplex;
+    SimplicialComplexPrivate() {}
+    SimplicialComplexPrivate(const std::vector<NSimplex > & simplices, const std::vector<Vector> & vertices)
     {
         m_simplices = simplices;
-        SimplicialComplex<NT,0>::m_vertices=vertices;
+        SC0::m_vertices=vertices;
         init();
     }
     //N+1 vertices on an N-simplex
-    SimplicialComplex(const std::vector<mtao::IndexSet<N+1> > & tuples, const std::vector<Vector> & vertices)
+    SimplicialComplexPrivate(const std::vector<mtao::IndexSet<N+1> > & tuples, const std::vector<Vector> & vertices)
     {
-        SimplicialComplex<NT,0>::m_vertices=vertices;
+        SC0::m_vertices=vertices;
         m_simplices.resize(tuples.size());
         std::transform(tuples.begin(), tuples.end(), m_simplices.begin(),
                 [](const mtao::IndexSet<N+1> & is) -> NSimplex
@@ -56,15 +197,15 @@ public:
         init();
     }
 
-    SimplicialComplex(const std::vector<unsigned int > & tuples, const std::vector<Vector> & vertices)
+    SimplicialComplexPrivate(const std::vector<unsigned int > & tuples, const std::vector<Vector> & vertices)
     {
-        SimplicialComplex<NT,0>::m_vertices=vertices;
+        SC0::m_vertices=vertices;
         //assert(tuples.size() % N+1 == 0, "Input tuples are incorrectly sized (indices % dimension+1 != 0)");
         m_simplices.resize(0);
         m_simplices.reserve(tuples.size()/(N+1));
         for(int i=0; i < tuples.size(); i+=N+1)
         {
-            m_simplices.push_back(Simplex<NumTraits, N>
+            m_simplices.push_back(NSimplex
                                   (
                                       reinterpret_cast<mtao::IndexSet<N+1> >(&tuples[i])
                                       )
@@ -79,25 +220,32 @@ public:
 
 
     template <int M=Dim>
-    const SparseMatrix & b() const{return SimplicialComplex<NT,M>::m_boundary;}
+    const SparseMatrix & b() const{return SCParent<M>::type::m_boundary;}
     template <int M=Dim>
-    const std::vector<Simplex<NumTraits, M> > & constSimplices() const
+    const std::vector<Simplex<NumTraits, typename LocalDT<M>::type > > & constSimplices() const
     {
         static_assert( M <= N, "Tried to access a set of simplices of a dimension too high");
-        return SimplicialComplex<NT,M>::m_simplices;
+        return SCParent<M>::type::m_simplices;
     }
     template <int M=Dim>
-    std::vector<Simplex<NumTraits, M> > & simplices()
+    std::vector<Simplex<NumTraits, typename LocalDT<M>::type > > & simplices()
     {
         static_assert( M <= N, "Tried to access a set of simplices of a dimension too high");
-        return SimplicialComplex<NT,M>::m_simplices;
+        return SCParent<M>::type::m_simplices;
     }
     template <int M=Dim>
-    size_t numSimplices()const{return SimplicialComplex<NT,M>::m_simplices.size();}
+    size_t numSimplices()const{return SCParent<M>::type::m_simplices.size();}
 
     template <int M=Dim>
     const DiagonalMatrix & interior() const 
-    {return SimplicialComplex<NT,M>::m_interior;}
+    {return SCParent<M>::type::m_interior;}
+
+    template <int M=Dim>
+    typename SCParent<M>::type::NSimplex & simplexByIndex(int ind) {
+        return SCParent<M>::type::m_simplices[
+            SCParent<M>::type::m_indexToSimplex[ind]
+            ];
+    }
 protected:
     //Builds the n-1 simplices and n <-> n-1 simplices relationships
     void init();
@@ -159,6 +307,11 @@ protected:
 
     void genDualVolume(NSimplex & s, std::vector<Vector> & clist)
     {
+        /*
+        for(int i=0; i < TopDim - Dim; ++i)
+        std::cout << " ";
+        std::cout << s.Index() << " " << s.center.transpose() << std::endl;
+        */
         clist[N] = s.center;
 
         if(N == clist.size()-1)
@@ -170,13 +323,34 @@ protected:
             auto&& origin = clist.back();
             for(int i=N; i < static_cast<int>(clist.size())-1; ++i)
             {
-                m.col(i-N) = this->m_vertices[i] - origin;
+                m.col(i-N) = clist[i] - origin;
+                /*
+                std::cout << (SC0::m_vertices[i] - origin).eval().transpose() <<  "======";
+                std::cout << SC0::m_vertices[i].transpose() << "----" << origin.transpose() <<std::endl;
+                */
             }
-            s.dualVolume += std::sqrt((m.transpose()*m).determinant())/mtao::cefactorial(N);
+            /*
+            if(N==1 && false)
+           {
+                for(int i=N; i < clist.size(); ++i) {
+        for(int i=0; i < clist.size(); ++i)
+            std::cout << " ";
+        std::cout << i << "---- " << clist[i].transpose() << std::endl;
+                }
+
+        for(int i=0; i < TopDim - Dim; ++i)
+        std::cout << " ";
+                std::cout <<"Resulting mat: "  << m.transpose() << std::endl;
+        for(int i=0; i < TopDim - Dim; ++i)
+        std::cout << " ";
+            std::cout << "Volume computed:" << s.Index()  << " " << std::sqrt((m.transpose()*m).determinant())/mtao::cefactorial(TopDim - N) << std::endl;
+            }
+            */
+            s.dualVolume += std::sqrt((m.transpose()*m).determinant())/mtao::cefactorial(TopDim - N);
         }
         for(typename decltype(m_boundary)::InnerIterator it(m_boundary, s.Index()); it; ++it)
         {
-            SCm1::genDualVolume(simplices<N-1>()[it.row()], clist);
+            SCm1::genDualVolume(simplexByIndex<N-1>(it.row()), clist);
         }
     }
 
@@ -202,120 +376,24 @@ protected:
     std::vector<NSimplex > m_simplices;
     void finalize();
 protected:
-    typedef SimplicialComplex<NT,N-1> SCm1;
+    typedef typename SCParent<N-1>::type SCm1;
+    typedef typename SCParent<0>::type SC0;
     std::vector<Triplet > m_boundaryTriplets;
     std::vector< std::array<Vector,N+1 > > m_whitneyBases;
     SparseMatrixColMajor m_boundary;//Rows are n-1 simplices cols are n simplices
     DiagonalMatrix m_interior;
     std::set<NSimplex> m_simplexSet;
+    std::map<int,int> m_indexToSimplex;
 
 
 
 };
 
-//A 0-simplicial complex only manages
-//the vertices and some trivalish set of simplices.  vertices without any higher order
-//information are considered bad data and though stored here, they do not have simplices 
-//associated with them.
-template <typename NT>
-class SimplicialComplex<NT,0>
-{
-public:
-    typedef NT NumTraits;
-    static const int Dim = 0;
-    static const int EmbeddedDim = NT::Dim;
-    typedef typename NumTraits::Vector Vector;
-    typedef typename NumTraits::Scalar Scalar;
-    typedef typename NumTraits::Triplet Triplet;
-    typedef typename NumTraits::DiagonalMatrix DiagonalMatrix;
-    typedef Simplex<NumTraits,0> NSimplex;
-
-
-    SimplicialComplex() {}
-    SimplicialComplex(const std::vector<Vector> & vertices)
-    {
-        m_vertices=vertices;
-    }
-
-    SimplicialComplex(const std::vector<NSimplex >& simplices, const std::vector<Vector> & vertices)
-    {
-        m_simplices = simplices;
-        m_vertices=vertices;
-    }
-    std::vector<Vector> & vertices(){return m_vertices;}
-    const std::vector<Vector> & constVertices()const{return m_vertices;}
-    template <int M=0>
-    const DiagonalMatrix & interior() const 
-    {return SimplicialComplex<NT,M>::m_interior;}
-
-protected:
-    void init() {}
-    void finalize()
-    {
-        m_simplices.resize(m_simplexSet.size());
-        m_interior.resize(m_simplexSet.size());
-        m_interior.setIdentity();
-        std::copy(m_simplexSet.begin(), m_simplexSet.end(), m_simplices.begin());
-        for(auto&& s: m_simplices)
-        {
-            computeVolume(s);
-            computeCircumcenter(s);
-        }
-    }
-    int add(NSimplex & simplex)
-    {
-        simplex.setIndex(-1);
-        typename std::set<NSimplex>::const_iterator it = m_simplexSet.find(simplex);
-        if(it == m_simplexSet.end())
-        {
-            simplex.setIndex(m_simplexSet.size());
-            //m_simplices.push_back(simplex);
-            m_simplexSet.insert(simplex);
-            return simplex.Index();
-        }
-        else
-        {
-            return it->Index();
-        }
-    }
-    void computeVolume(NSimplex & s)
-    {
-        s.volume = 1;
-    }
-    void computeCircumcenter(NSimplex & s)
-    {
-        s.center = m_vertices[s.Index()];
-    }
-
-    void genDualVolume(NSimplex & s, std::vector<Vector> & clist)
-    {
-        clist[0] = s.center;
-        int M = EmbeddedDim;
-        typename NumTraits::DynamicMatrix m(M,clist.size()-1);
-        auto&& origin = clist.back();
-        for(int i=0; i < static_cast<int>(clist.size())-1; ++i)
-        {
-            m.col(i) = this->m_vertices[i] - origin;
-        }
-        s.dualVolume += std::sqrt((m.transpose()*m).determinant())/mtao::cefactorial(0);
-    }
-    void setInterior(int index)
-    {
-        m_interior.diagonal()(index)=0;
-    }
-
-protected:
-    std::vector<NSimplex > m_simplices;
-    DiagonalMatrix m_interior;
-    std::vector<Vector> m_vertices;
-    std::set<NSimplex> m_simplexSet;
-
-};
 
 
 
-template <typename NT, int N>
-    void SimplicialComplex<NT,N>::genWhitneyBases()
+template <typename NT, typename DT>
+    void SimplicialComplexPrivate<NT,DT>::genWhitneyBases()
 {
     m_whitneyBases.resize(m_simplices.size());
     std::transform(m_simplices.begin(), m_simplices.end(), m_whitneyBases.begin(), [&](const NSimplex & s) 
@@ -340,7 +418,7 @@ template <typename NT, int N>
                     }
                 }
                 auto&& m1cc = sm1.Center();
-                auto&& v = this->vertices()[n];
+                auto&& v = SC0::m_vertices[n];
                 Vector d = s.Center()-m1cc;
                 Scalar d2n = d.squaredNorm();
                 Scalar scale = (v-m1cc).dot(d)/(d2n*d2n);
@@ -356,8 +434,8 @@ template <typename NT, int N>
         return myarr;
     });
 }
-template <typename NT, int N>
-auto SimplicialComplex<NT,N>::barycentricCoords(const NSimplex & s, const Vector & v) -> std::array<Scalar,N+1>
+template <typename NT, typename DT>
+auto SimplicialComplexPrivate<NT,DT>::barycentricCoords(const NSimplex & s, const Vector & v) -> std::array<Scalar,N+1>
 {
     std::array<Scalar,N+1> myvec;
     int sind=0;
@@ -368,9 +446,9 @@ auto SimplicialComplex<NT,N>::barycentricCoords(const NSimplex & s, const Vector
 }
 //Check whether this simplex already exists
 //if it does exist set the index so the owner of the simplex knows where it belongs
-//if it doesn't exist push it into the list 
-    template <typename NT,int N>
-int SimplicialComplex<NT,N>::add(NSimplex & simplex)
+//if it doesn't exist push it into the list
+    template <typename NT,typename DT>
+int SimplicialComplexPrivate<NT,DT>::add(NSimplex & simplex)
 {
     simplex.setIndex(-1);
     typename std::set<NSimplex>::const_iterator it = m_simplexSet.find(simplex);
@@ -389,8 +467,8 @@ int SimplicialComplex<NT,N>::add(NSimplex & simplex)
 
 
 }
-    template <typename NT,int N>
-int SimplicialComplex<NT,N>::createBoundary(NSimplex& simplex)
+    template <typename NT,typename DT>
+int SimplicialComplexPrivate<NT,DT>::createBoundary(NSimplex& simplex)
 {
 
     mtao::IndexSet<N> index;
@@ -403,19 +481,19 @@ int SimplicialComplex<NT,N>::createBoundary(NSimplex& simplex)
         {
             index[k]=simplex[(i+j)%(N+1)];
         }
-        Simplex<NumTraits,N-1> target(index);
+        Simplex<NumTraits,typename DT::LowerTraits > target(index);
         //add the simplex created by add
 
         if(N != 1) {
             m_boundaryTriplets.push_back(Triplet(
-                        SimplicialComplex<NT,N-1>::add(target),
+                        SCm1::add(target),
                         simplex.Index(),
                         simplex.isSameSign(target)?1:-1));
         }
         else
         {
             m_boundaryTriplets.push_back(Triplet(
-                        SimplicialComplex<NT,N-1>::add(target),
+                        SCm1::add(target),
                         simplex.Index(),
                         //(simplex.isSameSign(target)==(i==1))?1:-1));
                 (i==1)?1:-1));
@@ -424,8 +502,8 @@ int SimplicialComplex<NT,N>::createBoundary(NSimplex& simplex)
     }
     return 0;
 }
-    template <typename NT, int N>
-void SimplicialComplex<NT,N>::init()
+    template <typename NT, typename DT>
+void SimplicialComplexPrivate<NT,DT>::init()
 {
     int index=0;
     /*
@@ -474,13 +552,13 @@ void SimplicialComplex<NT,N>::init()
 
 }
 
-template <typename NT, int N>
-void SimplicialComplex<NT,N>::finalize()
+template <typename NT, typename DT>
+void SimplicialComplexPrivate<NT,DT>::finalize()
 {
 
     SCm1::finalize();//need to finalize before boundary, which depends on the smaller pieces
 
-    if(N < TopDim())
+    if(N < TopDim)
     {
         m_simplices.resize(m_simplexSet.size());
         std::copy(m_simplexSet.begin(), m_simplexSet.end(), m_simplices.begin());
@@ -495,6 +573,9 @@ void SimplicialComplex<NT,N>::finalize()
     }
 
 
+    for(int i=0; i < m_simplices.size(); ++i) {
+        m_indexToSimplex[m_simplices[i].Index()] = i;
+    }
 
     m_boundary.resize(SCm1::m_simplices.size(), m_simplices.size());
     m_boundary.setFromTriplets(m_boundaryTriplets.begin(), m_boundaryTriplets.end());
@@ -505,6 +586,39 @@ void SimplicialComplex<NT,N>::finalize()
 
 
 }
+template <typename NT, int N_>
+class SimplicialComplex: public SimplicialComplexPrivate<NT,DimTraits<N_,N_> > {
+    private: typedef SimplicialComplexPrivate<NT,DimTraits<N_,N_> > PrivateParent;
+    public:
+    typedef NT NumTraits;
+    typedef DimTraits<N_,N_> DimTraits;
+    static const int Dim = N_;
+    static const int N = N_;
+    static const int TopDim = N_;
+    static const int EmbeddedDim = NT::Dim;
+    typedef typename NumTraits::Vector Vector;
+    typedef typename NumTraits::Scalar Scalar;
+    typedef typename NumTraits::Triplet Triplet;
+    typedef typename NumTraits::SparseMatrix SparseMatrix;
+    typedef typename NumTraits::DiagonalMatrix DiagonalMatrix;
+    typedef typename NumTraits::SparseMatrixColMajor SparseMatrixColMajor;
+    typedef  Simplex<NumTraits, DimTraits> NSimplex;
+    SimplicialComplex() {}
+    SimplicialComplex(const std::vector<NSimplex > & simplices, const std::vector<Vector> & vertices)
+        : PrivateParent(simplices,vertices)
+    {
+    }
+    SimplicialComplex(const std::vector<mtao::IndexSet<N+1> > & tuples, const std::vector<Vector> & vertices)
+        : PrivateParent(tuples,vertices)
+    {
+    }
+
+    SimplicialComplex(const std::vector<unsigned int > & tuples, const std::vector<Vector> & vertices)
+        : PrivateParent(tuples,vertices)
+    {
+        }
+
+};
 
 
 typedef SimplicialComplex<NumericalTraits<float, 3>, 2> TriangleMeshf;

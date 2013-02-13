@@ -29,5 +29,24 @@ auto formToRenderable(const Form & form) -> std::vector<std::array<float,Form::T
     }
     return ret;
 }
+    /*
+template <typename SimplicialComplex, typename Form>
+auto formToFluxRenderable(const SimplicialComplex & sc, const Form & form) -> std::vector<std::array<float,Form::Traits::NOut+1> > {
+
+    static const int N = SimplicialComplex::Dim;
+    auto&& nsimplices = sc.simplices();
+    auto&& n1simplices = sc.template simplices<N-1>();
+    std::vector<std::array<float,Form::Traits::NOut+1> > ret(nsimplices.size());
+    std::transform(ind.cbegin(), ind.cend(), nsimplices.begin(), [&form](const Indices & ind) {
+        for(int i=0; i <=N; ++i) {
+        }
+
+    });
+    for(int i=0; i < form.expr.rows(); ++i) {
+        ret[i].fill(form.expr(i));
+    }
+    return ret;
+}
+    */
 };
 #endif

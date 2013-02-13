@@ -234,7 +234,7 @@ protected:
 
 template <typename Complex_>
 class HiddenOperatorContainer<Complex_,0>{
-    friend DEC<Complex_>;
+    friend class DEC<Complex_>;
     typedef typename Complex_::NumTraits NumTraits;
     typedef typename NumTraits::DiagonalMatrix DiagonalMatrix;
     typedef typename NumTraits::SparseMatrixColMajor SparseMatrixColMajor;

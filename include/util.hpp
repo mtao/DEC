@@ -27,6 +27,8 @@ std::vector<Vector> normalize(const std::vector<Vector> & vertices) {
     return ret;
 }
 
+
+
 };
 
 #endif

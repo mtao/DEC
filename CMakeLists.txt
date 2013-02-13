@@ -22,6 +22,7 @@ SET(DEC_HEADERS
     include/dec_overloads.hpp
     include/util.hpp
     include/render.hpp
+    include/kdtree.hpp
     )
 
 ADD_CUSTOM_TARGET(headers SOURCES ${DEC_HEADERS})

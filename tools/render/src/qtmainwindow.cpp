@@ -13,6 +13,7 @@
 #include <random>
 #include <Eigen/SparseCholesky>
 #include <Eigen/IterativeLinearSolvers>
+#include <Eigen/ArpackSupport>
 //#include <Eigen/CholmodSupport>
 //#include "glutil.h"
 
@@ -55,6 +56,7 @@ MainWindow::MainWindow(QWidget * parent): QMainWindow(parent) {
     setCentralWidget(m_glwidget);
 }
 #include <random>
+Eigen::MatrixXf m;
 void MainWindow::openFile(const QString & filename) {
     MeshPackage package;
     m_mesh.reset(readOBJtoSimplicialComplex<float>(filename.toStdString()));
@@ -67,6 +69,7 @@ void MainWindow::openFile(const QString & filename) {
 
 
     mtao::normalizeInPlace(verts);//Normalize!!
+
 
     m_glwidget->makeCurrent();//activate glwidget opengl context for creating buffer objects
     package.vertices.reset(new VertexBufferObject((void*)verts.data(),
@@ -113,6 +116,21 @@ void MainWindow::openFile(const QString & filename) {
     m_glwidget->recieveMesh(package);
     m_2form = m_dec->template genForm<PRIMAL_FORM,2>();
     m_2form.expr = decltype(m_2form.expr)::Zero(m_2form.expr.rows());
+    /*
+    for(auto&& s: m_mesh->template simplices<1>()) {
+        std::cout << s.Volume() << " " << s.DualVolume() << std::endl;
+    }
+    */
+
+    Eigen::SparseMatrix<float> dhdh = m_dec->d(m_dec->h(m_dec->d(m_dec->template h<2>()))).expr.eval();
+    Eigen::ArpackGeneralizedSelfAdjointEigenSolver<
+            Eigen::SparseMatrix<float>,
+            typename Eigen::SimplicialLDLT<decltype(dhdh)>,
+            true
+            > eigensolver(dhdh, 100);
+    std::cout << eigensolver.eigenvalues().transpose() << std::endl;
+    m = eigensolver.eigenvectors();
+
 }
 
 
@@ -121,20 +139,41 @@ void MainWindow::openFile(const QString & filename) {
 
 
 
-
+bool dumb = true;
 void MainWindow::randomData() {
     if(!m_dec || !m_mesh) {return;}
     auto&& form2 = m_dec->template genForm<PRIMAL_FORM,2>();
-    form2.expr = decltype(form2.expr)::Random(form2.expr.rows());
+    //form2.expr = decltype(form2.expr)::Random(form2.expr.rows());
 
     Eigen::SparseMatrix<float> dhdh = m_dec->d(m_dec->h(m_dec->d(m_dec->template h<2>()))).expr.eval();
+    /*
+    if(dumb) {
+        form2 = m_2form;
+        dumb = false;
+    std::cout << dhdh << std::endl;
+    std::cout << m_dec->template h<2>().expr << std::endl;
+    std::cout << m_dec->template d<0,DUAL_FORM>().expr << std::endl;
+    std::cout << m_dec->template h<1,DUAL_FORM>().expr << std::endl;
+    std::cout << m_dec->template d<1,PRIMAL_FORM>().expr << std::endl;
+    for(auto&& s: m_mesh->template simplices<1>()) {
+        std::cout << s.Volume() << " " << s.DualVolume() << std::endl;
+    }
+    }
+    */
 
+        /*
+    form2.expr = dhdh*form2.expr;
+    std::cout << form2.expr.norm() << std::endl;
+    form2.expr.normalize();
 
+    */
 
 
 
     //typename Eigen::SimplicialLDLT<decltype(dhdh)> chol;
     typename Eigen::ConjugateGradient<decltype(dhdh), Eigen::Lower, typename Eigen::SimplicialLDLT<decltype(dhdh)> > chol;
+    chol.setMaxIterations(dhdh.rows() * dhdh.cols());
+    chol.setTolerance(0.1);
     //typename Eigen::ConjugateGradient<decltype(dhdh), Eigen::Lower, typename Eigen::CholmodBaseSupernodalLLT<decltype(dhdh)> > chol;
     chol.compute(dhdh);
     if(chol.info() != Eigen::Success)
@@ -147,10 +186,28 @@ void MainWindow::randomData() {
         std::cout << "Failed at solving" << std::endl;
     }
     std::cout << "Norm error: " << (dhdh* ret - m_2form.expr).norm() << std::endl;
-    form2.expr = ret;
-    auto&& form1 = m_dec->template genForm<PRIMAL_FORM,1>();
-    form1 = m_dec->h(m_dec->d(m_dec->h(form2)));//apply codifferential operator
+    form2.expr = ret / ret.lpNorm<Eigen::Infinity>();
+    static int WHICH = 0;
+    form2.expr = m.col(WHICH);
+    std::cout << form2.expr.transpose() << std::endl;
+    WHICH = (WHICH+1)%100;
+    /*
+    form2 = m_dec->d(m_dec->h(m_dec->d(m_dec->h(m_2form))));
+    form2.expr = form2.expr / form2.expr.lpNorm<Eigen::Infinity>();
+    */
+    m_glwidget->recieveForm(mtao::makeFormPackage("Test2",form2));
     m_2form = form2;
+    return;
+
+    auto&& form1 = m_dec->template genForm<PRIMAL_FORM,1>();
+    //form1 = m_dec->h(m_dec->d(m_dec->h(form2)));//apply codifferential operator
+    //m_2form = form2;
+    //form2 = m_2form;
+
+    for(int i=0; i < form1.expr.rows(); ++i) {
+        form1.expr(i) = m_mesh->template simplexByIndex<1>(i).DualVolume();
+    }
+    form1.expr = form1.expr / form1.expr.lpNorm<Eigen::Infinity>();
 
     m_glwidget->recieveForm(mtao::makeFormPackage("Test2",form2));
     m_glwidget->recieveForm(mtao::makeFormPackage("Test1",form1));
@@ -189,8 +246,10 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
     case Qt::Key_T:
         m_2form.expr = decltype(m_2form.expr)::Zero(m_2form.expr.rows());
         rand = std::uniform_int_distribution<int>(0,m_2form.expr.rows()-1);
-        for(int i=0; i < rand(generator); ++i)
-        m_2form.expr(rand(generator)) = 1;
+        //for(int i=0; i < rand(generator); ++i)
+        m_2form.expr(rand(generator)) = 10;
+    //m_2form.expr = decltype(m_2form.expr)::Random(m_2form.expr.rows());
+        dumb = true;
 
     m_glwidget->recieveForm(mtao::makeFormPackage("Test2",m_2form));
         break;

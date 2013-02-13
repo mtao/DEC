@@ -5,6 +5,7 @@
 #include "render.hpp"
 int main()
 {
+    std::cout << "Running compile test: " << std::endl;
     typedef Eigen::Vector3d V;
     std::vector<V> vecs;
     std::vector<mtao::IndexSet<3> > tris;
@@ -20,6 +21,7 @@ int main()
     tris.push_back(mtao::IndexSet<3>({3,0,6}));
 
     TriangleMesh sc(tris,vecs);
+    std::cout << "Vertices: " << sc.vertices().size() << std::endl;
     for(auto & m: sc.vertices())
     {
         std::cout << m.transpose()<< " | ";
