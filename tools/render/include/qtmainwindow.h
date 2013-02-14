@@ -42,9 +42,9 @@ public slots:
 private:
     GLWidget * m_glwidget;
     std::unique_ptr<TriangleMeshf> m_mesh;
-    std::unique_ptr<DEC<TriangleMeshf> > m_dec;
+    std::unique_ptr<DEC<TriangleMeshf,true> > m_dec;
     decltype(m_dec->template genForm<PRIMAL_FORM,2>()) m_2form;
-    decltype(m_dec->template genForm<PRIMAL_FORM,1>()) m_1form;
+    decltype(m_dec->template genForm<DUAL_FORM,1>()) m_1form;
     void randomData();
 signals:
     void meshLoaded(const MeshPackage & package);

@@ -56,12 +56,13 @@ MainWindow::MainWindow(QWidget * parent): QMainWindow(parent) {
     setCentralWidget(m_glwidget);
 }
 #include <random>
-Eigen::MatrixXf m;
+//Eigen::MatrixXf m;
 void MainWindow::openFile(const QString & filename) {
     MeshPackage package;
     m_mesh.reset(readOBJtoSimplicialComplex<float>(filename.toStdString()));
     std::cout << "Read a mesh with verts:faces: " << m_mesh->vertices().size()<< ":" << m_mesh->numSimplices() << std::endl;
-    m_dec.reset(new DEC<TriangleMeshf>(*m_mesh));
+    //m_dec.reset(new DEC<TriangleMeshf>(*m_mesh));
+    m_dec.reset(new decltype(m_dec)::element_type(*m_mesh));
     typedef typename TriangleMeshf::Vector Vector;
     const static int vecsize = sizeof(Vector)/sizeof(float);
     std::vector<Vector> verts = m_mesh->vertices();//copy here so we can normalize coordinates
@@ -116,12 +117,15 @@ void MainWindow::openFile(const QString & filename) {
     m_glwidget->recieveMesh(package);
     m_2form = m_dec->template genForm<PRIMAL_FORM,2>();
     m_2form.expr = decltype(m_2form.expr)::Zero(m_2form.expr.rows());
+    m_1form = m_dec->template genForm<DUAL_FORM,1>();
+    m_1form.expr = decltype(m_1form.expr)::Zero(m_1form.expr.rows());
     /*
     for(auto&& s: m_mesh->template simplices<1>()) {
         std::cout << s.Volume() << " " << s.DualVolume() << std::endl;
     }
     */
 
+    /*
     Eigen::SparseMatrix<float> dhdh = m_dec->d(m_dec->h(m_dec->d(m_dec->template h<2>()))).expr.eval();
     Eigen::ArpackGeneralizedSelfAdjointEigenSolver<
             Eigen::SparseMatrix<float>,
@@ -131,21 +135,49 @@ void MainWindow::openFile(const QString & filename) {
     std::cout << eigensolver.eigenvalues().transpose() << std::endl;
     m = eigensolver.eigenvectors();
 
+    */
 }
 
 
 
 
 
-
+#define CHECK_INTERIORS
 
 bool dumb = true;
 void MainWindow::randomData() {
     if(!m_dec || !m_mesh) {return;}
     auto&& form2 = m_dec->template genForm<PRIMAL_FORM,2>();
+    auto&& form1 = m_dec->template genForm<PRIMAL_FORM,1>();
+    auto&& form0 = m_dec->template genForm<PRIMAL_FORM,0>();
+#ifdef CHECK_INTERIORS
+    auto&& interior2 = m_mesh->template interior<2>();
+    for(int i=0; i < interior2.rows(); ++i) {
+
+        form2.expr(i) = interior2.diagonal()(i);
+        if(dumb)
+            form2.expr(i) = 1-form2.expr(i);
+    }
+    auto&& interior1 = m_mesh->template interior<1>();
+    for(int i=0; i < interior1.rows(); ++i) {
+        form1.expr(i) = interior1.diagonal()(i);
+        if(dumb)
+            form1.expr(i) = 1-form1.expr(i);
+    }
+    auto&& interior0 = m_mesh->template interior<0>();
+    for(int i=0; i < interior0.rows(); ++i) {
+        form0.expr(i) = interior0.diagonal()(i);
+        if(dumb)
+            form0.expr(i) = 1-form0.expr(i);
+    }
+    m_glwidget->recieveForm(mtao::makeFormPackage("Test2",form2));
+    m_glwidget->recieveForm(mtao::makeFormPackage("Test1",form1));
+    m_glwidget->recieveForm(mtao::makeFormPackage("Test0",form0));
+    return;
+#endif
     //form2.expr = decltype(form2.expr)::Random(form2.expr.rows());
 
-    Eigen::SparseMatrix<float> dhdh = m_dec->d(m_dec->h(m_dec->d(m_dec->template h<2>()))).expr.eval();
+    Eigen::SparseMatrix<float> dhdh = m_dec->h(m_dec->d(m_dec->h(m_dec->template d<1>()))).expr.eval();
     /*
     if(dumb) {
         form2 = m_2form;
@@ -172,7 +204,7 @@ void MainWindow::randomData() {
 
     //typename Eigen::SimplicialLDLT<decltype(dhdh)> chol;
     typename Eigen::ConjugateGradient<decltype(dhdh), Eigen::Lower, typename Eigen::SimplicialLDLT<decltype(dhdh)> > chol;
-    chol.setMaxIterations(dhdh.rows() * dhdh.cols());
+    chol.setMaxIterations(dhdh.rows()/5);
     chol.setTolerance(0.1);
     //typename Eigen::ConjugateGradient<decltype(dhdh), Eigen::Lower, typename Eigen::CholmodBaseSupernodalLLT<decltype(dhdh)> > chol;
     chol.compute(dhdh);
@@ -180,26 +212,30 @@ void MainWindow::randomData() {
     {
         std::cout << "Failed at dec->mposition" << std::endl;
     }
-    Eigen::VectorXf ret = chol.solve(m_2form.expr);//solve poisson problem
+    Eigen::VectorXf ret = chol.solve(m_1form.expr);//solve poisson problem
     if(chol.info() != Eigen::Success)
     {
         std::cout << "Failed at solving" << std::endl;
     }
-    std::cout << "Norm error: " << (dhdh* ret - m_2form.expr).norm() << std::endl;
-    form2.expr = ret / ret.lpNorm<Eigen::Infinity>();
+    m_1form.expr = ret;
+    //std::cout << "Norm error: " << (dhdh* ret - m_1form.expr).norm() << std::endl;
+    form1.expr = ret / ret.lpNorm<Eigen::Infinity>();
+    /*
     static int WHICH = 0;
     form2.expr = m.col(WHICH);
     std::cout << form2.expr.transpose() << std::endl;
     WHICH = (WHICH+1)%100;
+    */
     /*
     form2 = m_dec->d(m_dec->h(m_dec->d(m_dec->h(m_2form))));
     form2.expr = form2.expr / form2.expr.lpNorm<Eigen::Infinity>();
     */
+    //form2 = m_dec->d(m_dec->h(form1));
     m_glwidget->recieveForm(mtao::makeFormPackage("Test2",form2));
-    m_2form = form2;
+    m_glwidget->recieveForm(mtao::makeFormPackage("Test1",form1));
     return;
+    m_2form = form2;
 
-    auto&& form1 = m_dec->template genForm<PRIMAL_FORM,1>();
     //form1 = m_dec->h(m_dec->d(m_dec->h(form2)));//apply codifferential operator
     //m_2form = form2;
     //form2 = m_2form;
@@ -212,7 +248,6 @@ void MainWindow::randomData() {
     m_glwidget->recieveForm(mtao::makeFormPackage("Test2",form2));
     m_glwidget->recieveForm(mtao::makeFormPackage("Test1",form1));
 
-    auto&& form0 = m_dec->template genForm<PRIMAL_FORM,0>();
     for(int i=0; i < form0.expr.rows(); ++i)
     {
         form0.expr(i) = -1;
@@ -244,14 +279,21 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
         randomData();
         break;
     case Qt::Key_T:
-        m_2form.expr = decltype(m_2form.expr)::Zero(m_2form.expr.rows());
-        rand = std::uniform_int_distribution<int>(0,m_2form.expr.rows()-1);
+        m_1form.expr = decltype(m_1form.expr)::Zero(m_1form.expr.rows());
+        rand = std::uniform_int_distribution<int>(0,m_1form.expr.rows()-1);
         //for(int i=0; i < rand(generator); ++i)
-        m_2form.expr(rand(generator)) = 10;
+        m_1form.expr(rand(generator)) = 10;
     //m_2form.expr = decltype(m_2form.expr)::Random(m_2form.expr.rows());
+#ifdef CHECK_INTERIORS
+        dumb ^= true;
+        randomData();
+        return;
+#else
         dumb = true;
+#endif
 
-    m_glwidget->recieveForm(mtao::makeFormPackage("Test2",m_2form));
+
+    m_glwidget->recieveForm(mtao::makeFormPackage("Test1",m_1form));
         break;
 
     default:

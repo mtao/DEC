@@ -542,9 +542,11 @@ void SimplicialComplexPrivate<NT,DT>::init()
         if(B.innerVector(i).nonZeros() == 1)
         {
             SCm1::setInterior(i);
+            /*
             m_interior.diagonal()(
                     typename decltype(B)::InnerIterator(B,i).row()
                     )=0;
+                    */
 
 
         }
