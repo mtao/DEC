@@ -4,7 +4,6 @@
 #include "../include/qtglwidget.h"
 #include "../../../include/dec.hpp"
 
-#ifdef DEC_RENDER_H
 namespace mtao{
     template <typename Form>
         constexpr RenderType formToRendertype(const Form &) {
@@ -27,7 +26,6 @@ namespace mtao{
                     GL_STATIC_DRAW,1)};
         }
 };
-#endif
 class MainWindow: public QMainWindow {
     Q_OBJECT
 public:
@@ -38,16 +36,13 @@ protected:
 
 public slots:
     void openFile();
-    void openFile(const QString & filename);
-private:
+    virtual void openFile(const QString & filename);
+protected:
     GLWidget * m_glwidget;
     std::unique_ptr<TriangleMeshf> m_mesh;
     std::unique_ptr<DEC<TriangleMeshf,true> > m_dec;
-    decltype(m_dec->template genForm<PRIMAL_FORM,2>()) m_2form;
-    decltype(m_dec->template genForm<DUAL_FORM,1>()) m_1form;
-    void randomData();
 signals:
-    void meshLoaded(const MeshPackage & package);
+    void meshLoaded(const MeshPackage * package);
     void formLoaded(const FormPackage & package);
     void dataLoaded();
 };

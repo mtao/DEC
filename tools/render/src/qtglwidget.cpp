@@ -14,6 +14,7 @@ GLWidget::GLWidget(const QGLFormat & format, QWidget * parent): QGLWidget(format
 
     connect( m_timer, SIGNAL( timeout() ), SLOT( update() ) );
 
+    grabKeyboard();
     m_timer->start( 16 );
     QResource::registerResource("../qrc_shaders.cxx");
     QDir d(":/");
@@ -59,8 +60,11 @@ void GLWidget::initShader(ShaderProgram & program, const QString & geotype)
     QString vertexShaderPath(":/shader.v.glsl");
     QString fragmentShaderPath(":/shader.f.glsl");
     QString geometryShaderPath(tr(":/") + geotype + tr("shader.g.glsl"));
-    if(this->format().majorVersion() < 2 || (geotype != tr("") && geotype != tr("face"))) {
+    qWarning() << "Format: " << this->format().majorVersion();
+    if(this->format().majorVersion() <= 2 || (geotype != tr("") && geotype != tr("face"))) {
         vertexShaderPath = tr(":/shader.130.v.glsl");
+        if(geotype == tr(""))
+            vertexShaderPath = tr(":/emptyshader.130.v.glsl");
         fragmentShaderPath = tr(":/shader.130.f.glsl");
         geometryShaderPath = tr("");//hopefully "" file won't exist
     }
@@ -151,13 +155,66 @@ GLuint GLWidget::compileShader(GLenum shaderType, const QString & fileName)
 
 
 
-void GLWidget::recieveMesh(const MeshPackage &package) {
-    m_meshpackage = package;
-    m_shader->addAttribute("vertex", package.vertices);
-    m_vertshader->addAttribute("vertex", package.vertices);
-    m_edgeshader->addAttribute("vertex", package.edgevertices);
-    m_faceshader->addAttribute("vertex", package.facevertices);
+void GLWidget::recieveMesh(const MeshPackage *package) {
+
+    m_meshpackage.reset(package);
+    const std::vector<Eigen::Vector3f> & verts = m_meshpackage->vertices;
+    m_num_verts = verts.size();
+    const std::vector<unsigned int> & indices = m_meshpackage->triangle_indices;
+    const std::vector<unsigned int> & edge_indices = m_meshpackage->triangle_indices;
+    int i;
+
+    std::vector<Eigen::Vector3f> faceverts(indices.size());
+    std::vector<unsigned int> faceindices(indices.size());
+    std::transform(indices.cbegin(), indices.cend(), faceverts.begin(),
+            [&verts](const unsigned int ind)->decltype(faceverts)::value_type
+            {
+            return verts[ind];
+            });
+
+    i=0;
+    for(unsigned int & ind: faceindices)
+    {
+        ind = i++;
+    }
+    std::vector<Eigen::Vector3f> edgeverts(edge_indices.size());
+    std::transform(edge_indices.cbegin(), edge_indices.cend(), edgeverts.begin(),
+            [&verts](const unsigned int ind)->decltype(edgeverts)::value_type
+            {
+            return verts[ind];
+            });
+    std::vector<unsigned int> edgeindices(edgeverts.size());
+
+    i=0;
+    for(unsigned int & ind: edgeindices)
+    {
+        ind = i++;
+    }
+
+
+
+
+    const static int vecsize = sizeof(Eigen::Vector3f)/sizeof(float);
+    auto vbo = std::make_shared< VertexBufferObject>((void*)verts.data(),
+                vecsize * verts.size(), GL_STATIC_DRAW);
+    m_indices.reset(new VertexIndexObject((void*)indices.data(), indices.size(), GL_STATIC_DRAW, GL_TRIANGLES));
+
+    m_shader->addAttribute("vertex",vbo);
+    m_vertshader->addAttribute("vertex",vbo);
+
+
+    m_faceshader->addAttribute("vertex",std::make_shared<VertexBufferObject>((void*)faceverts.data(),
+                vecsize * faceverts.size(), GL_STATIC_DRAW));
+    m_faceindices.reset(new VertexIndexObject((void*)faceindices.data(), faceindices.size(), GL_STATIC_DRAW, GL_TRIANGLES));
+
+
+    m_edgeshader->addAttribute("vertex",std::make_shared<VertexBufferObject>((void*)edgeverts.data(),
+                vecsize * edgeverts.size(), GL_STATIC_DRAW));
+    m_edgeindices.reset(new VertexIndexObject((void*)edgeindices.data(), edgeindices.size(), GL_STATIC_DRAW, GL_LINES));
+
 }
+
+
 
 
 void GLWidget::recieveForm(const FormPackage &package) {
@@ -183,28 +240,7 @@ void GLWidget::paintGL() {
     mat_mvp = mat_p * mat_mv;
 
 
-    if(!m_meshpackage.indices) return;
-    /*
-
-    ShaderProgram * shader;
-    switch(m_renderType)
-    {
-    case RT_FACE: shader = m_faceshader.get(); break;
-    case RT_EDGE: shader = m_edgeshader.get(); break;
-    case RT_VERT: shader = m_vertshader.get(); break;
-    }
-    shader->bind();
-    glUniformMatrix4fv(glGetUniformLocation(shader->programId, "MVP"),
-                       1, GL_FALSE, glm::value_ptr(mat_mvp));
-
-    switch(m_renderType)
-    {
-    case RT_FACE: m_meshpackage.faceindices->render(); break;
-    case RT_EDGE: m_meshpackage.edgeindices->render(); break;
-    case RT_VERT: glDrawArrays(GL_POINTS, 0, m_meshpackage.vertices->size); break;
-    }
-    shader->release();
-    */
+    if(!m_meshpackage) return;
     for(RenderType t: {RT_FACE, RT_EDGE, RT_VERT}) {
         if(m_renderType & t) {
             render(t);
@@ -220,46 +256,46 @@ std::unique_ptr<ShaderProgram> & GLWidget::shaderSelector(RenderType type) {
 
     switch(type)
     {
-    case RT_FACE: return m_faceshader;
-    case RT_EDGE: return m_edgeshader;
-    case RT_VERT: return m_vertshader;
-    case RT_NONE: return m_shader;
+        case RT_FACE: return m_faceshader;
+        case RT_EDGE: return m_edgeshader;
+        case RT_VERT: return m_vertshader;
+        case RT_NONE: return m_shader;
     }
 }
 
 /*
-void GLWidget::renderForm(const FormPackage & form) {
+   void GLWidget::renderForm(const FormPackage & form) {
 
-    ShaderProgram * shader = shaderSelector(form.type);
-    shader->bind();
-    glUniformMatrix4fv(glGetUniformLocation(shader->programId, "MVP"),
-                       1, GL_FALSE, glm::value_ptr(mat_mvp));
-    GLint attributeId = glGetAttribLocation(shader->programId, "data");
-    form.data->bind(attributeId);
+   ShaderProgram * shader = shaderSelector(form.type);
+   shader->bind();
+   glUniformMatrix4fv(glGetUniformLocation(shader->programId, "MVP"),
+   1, GL_FALSE, glm::value_ptr(mat_mvp));
+   GLint attributeId = glGetAttribLocation(shader->programId, "data");
+   form.data->bind(attributeId);
 
-    switch(form.type)
-    {
-    case RT_FACE: m_meshpackage.faceindices->render(); break;
-    case RT_EDGE: m_meshpackage.edgeindices->render(); break;
-    case RT_VERT: glDrawArrays(GL_POINTS, 0, m_meshpackage.vertices->size); break;
-    }
-    shader->release();
-}
-*/
+   switch(form.type)
+   {
+   case RT_FACE: m_meshpackage.faceindices->render(); break;
+   case RT_EDGE: m_meshpackage.edgeindices->render(); break;
+   case RT_VERT: glDrawArrays(GL_POINTS, 0, m_meshpackage.vertices->size); break;
+   }
+   shader->release();
+   }
+   */
 void GLWidget::render(RenderType type) {
 
     auto&& shader = shaderSelector(type);
     shader->bind();
     glUniformMatrix4fv(glGetUniformLocation(shader->programId, "MV"),
-                       1, GL_FALSE, glm::value_ptr(mat_mv));
+            1, GL_FALSE, glm::value_ptr(mat_mv));
     glUniformMatrix4fv(glGetUniformLocation(shader->programId, "MVP"),
-                       1, GL_FALSE, glm::value_ptr(mat_mvp));
+            1, GL_FALSE, glm::value_ptr(mat_mvp));
     switch(type)
     {
-    case RT_NONE: m_meshpackage.indices->render(); break;
-    case RT_FACE: m_meshpackage.faceindices->render(); break;
-    case RT_EDGE: m_meshpackage.edgeindices->render(); break;
-    case RT_VERT: glDrawArrays(GL_POINTS, 0, m_meshpackage.vertices->size); break;
+        case RT_NONE: m_indices->render(); break;
+        case RT_FACE: m_faceindices->render(); break;
+        case RT_EDGE: m_edgeindices->render(); break;
+        case RT_VERT: glDrawArrays(GL_POINTS, 0, m_num_verts); break;
     }
     shader->release();
 }
@@ -270,10 +306,10 @@ void GLWidget::render(RenderType type) {
 
 void GLWidget::keyPressEvent(QKeyEvent *event) {
     switch(event->key()) {
-    case Qt::Key_F: m_renderType ^= RT_FACE; break;
-    case Qt::Key_E: m_renderType ^= RT_EDGE; break;
-    case Qt::Key_V: m_renderType ^= RT_VERT; break;
-    default: return;
+        case Qt::Key_F: m_renderType ^= RT_FACE; break;
+        case Qt::Key_E: m_renderType ^= RT_EDGE; break;
+        case Qt::Key_V: m_renderType ^= RT_VERT; break;
+        default: return;
     }
     //If I haven't used the key I'll have already returned, so I should accept the input
     event->accept();
