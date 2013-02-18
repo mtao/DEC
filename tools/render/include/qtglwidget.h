@@ -8,23 +8,7 @@
 #include <QTime>
 #include <QVector3D>
 
-struct MeshPackage {
-    std::shared_ptr<VertexBufferObject> vertices;
-    std::shared_ptr<VertexIndexObject> indices;
-    std::shared_ptr<VertexBufferObject> facevertices;
-    std::shared_ptr<VertexIndexObject> faceindices;
-    std::shared_ptr<VertexBufferObject> edgevertices;
-    std::shared_ptr<VertexIndexObject> edgeindices;
-};
-
-
-enum RenderType {RT_FACE=4, RT_VERT=1, RT_EDGE=2, RT_NONE=0};
-
-struct FormPackage{
-    QString title;
-    RenderType type;
-    std::shared_ptr<VertexBufferObject> data;
-};
+#include "packages.h"
 
 class MainWindow;
 class GLWidget: public QGLWidget
@@ -57,7 +41,10 @@ private:
     std::unique_ptr<ShaderProgram> m_vertshader;
     std::unique_ptr<ShaderProgram> m_faceshader;
     std::unique_ptr<ShaderProgram> m_edgeshader;
-    MeshPackage m_meshpackage;
+    std::shared_ptr<VertexIndexObject> m_indices;
+    std::shared_ptr<VertexIndexObject> m_faceindices;
+    std::shared_ptr<VertexIndexObject> m_edgeindices;
+    std::shared_ptr<const MeshPackage> m_meshpackage;
     std::map<QString, FormPackage> m_formpackages;
 
     QTime m_time;
@@ -71,7 +58,7 @@ private:
 public slots:
     void disableRendering(){m_doRender =false;}
     void enableRendering(){m_doRender = true;}
-    void recieveMesh(const MeshPackage & package);
+    void recieveMesh(std::shared_ptr<const MeshPackage> package);
     void recieveForm(const FormPackage & package);
     void enableForm(const QString & formname);
 };

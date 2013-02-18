@@ -66,7 +66,8 @@ void ShaderProgram::addAttribute(const char * name, std::shared_ptr<VertexBuffer
 std::shared_ptr<VertexBufferObject> ShaderProgram::getAttribute(const char * name)
 {
     GLint attributeId = getAttribLocation(name);
-    return attributes[attributeId].lock();
+    //return attributes[attributeId].lock();
+    return attributes[attributeId];
 
 }
 void ShaderProgram::bind(bool bindAttributes)
@@ -76,8 +77,10 @@ void ShaderProgram::bind(bool bindAttributes)
     {
         std::for_each(attributes.begin(), attributes.end(), [](decltype(attributes)::value_type & pair)
         {
-            if(auto vbo = pair.second.lock())
-                    vbo->bind(pair.first);
+
+            //if(auto vbo = pair.second.lock())
+            //        vbo->bind(pair.first);
+            pair.second->bind(pair.first);
         });
         attributesBound = true;
     }
@@ -88,10 +91,10 @@ void ShaderProgram::release()
     if(attributesBound)
     {
         std::for_each(attributes.begin(), attributes.end(), [](decltype(attributes)::value_type & pair)
-    {
-        glDisableVertexAttribArray(pair.first);
-    });
-    attributesBound = false;
+        {
+            glDisableVertexAttribArray(pair.first);
+        });
+        attributesBound = false;
     }
     glUseProgram(0);
 }
@@ -111,29 +114,31 @@ void VertexBufferObject::bind(GLint attributeId)
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     if(type == GL_INT || type == GL_UNSIGNED_INT)
     {
-    glVertexAttribIPointer( attributeId,
-                           tupleSize,
-                           type,
-                           stride,
-                           offset
-                           );
+        glVertexAttribIPointer( attributeId,
+                                tupleSize,
+                                type,
+                                stride,
+                                offset
+                                );
     }
     else
     {
-    glVertexAttribPointer( attributeId,
-                           tupleSize,
-                           type,
-                           normalized,
-                           stride,
-                           offset
-                           );
-            }
+        glVertexAttribPointer( attributeId,
+                               tupleSize,
+                               type,
+                               normalized,
+                               stride,
+                               offset
+                               );
+    }
 
 }
+#include <iostream>
 VertexBufferObject::~VertexBufferObject()
 {
-    if(owner)
-    glDeleteBuffers(1,&vbo);
+    if(owner){
+        glDeleteBuffers(1,&vbo);
+    }
 }
 
 VertexIndexObject::VertexIndexObject(GLvoid *data, GLsizei size, GLenum usage,
@@ -156,6 +161,7 @@ void VertexIndexObject::render()
 
 VertexIndexObject::~VertexIndexObject()
 {
-    if(owner)
-    glDeleteBuffers(1,&ibo);
+    if(owner) {
+        glDeleteBuffers(1,&ibo);
+    }
 }

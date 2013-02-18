@@ -93,7 +93,8 @@ struct ShaderProgram
     void release();
     GLuint programId;
     bool attributesBound=false;
-    std::map<GLint, std::weak_ptr<VertexBufferObject> > attributes;
+    //std::map<GLint, std::weak_ptr<VertexBufferObject> > attributes;
+    std::map<GLint, std::shared_ptr<VertexBufferObject> > attributes;
     //std::vector< VertexBufferObject> attributes;
     bool owner=true;
 };
