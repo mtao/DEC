@@ -14,6 +14,7 @@ GLWidget::GLWidget(const QGLFormat & format, QWidget * parent): QGLWidget(format
 
     connect( m_timer, SIGNAL( timeout() ), SLOT( update() ) );
 
+    grabKeyboard();
     m_timer->start( 16 );
     QResource::registerResource("../qrc_shaders.cxx");
     QDir d(":/");
@@ -59,8 +60,12 @@ void GLWidget::initShader(ShaderProgram & program, const QString & geotype)
     QString vertexShaderPath(":/shader.v.glsl");
     QString fragmentShaderPath(":/shader.f.glsl");
     QString geometryShaderPath(tr(":/") + geotype + tr("shader.g.glsl"));
-    if(this->format().majorVersion() < 2 || (geotype != tr("") && geotype != tr("face"))) {
+    if(this->format().majorVersion() < 3 || (geotype != tr("") && geotype != tr("face"))) {
         vertexShaderPath = tr(":/shader.130.v.glsl");
+        //if(geotype == tr("")) {
+        {
+            vertexShaderPath = tr(":/noneshader.130.v.glsl");
+        }
         fragmentShaderPath = tr(":/shader.130.f.glsl");
         geometryShaderPath = tr("");//hopefully "" file won't exist
     }
@@ -149,14 +154,64 @@ GLuint GLWidget::compileShader(GLenum shaderType, const QString & fileName)
     return shaderId;
 }
 
+#include <iostream>
 
-
-void GLWidget::recieveMesh(const MeshPackage &package) {
+void GLWidget::recieveMesh(std::shared_ptr<const MeshPackage> package) {
     m_meshpackage = package;
-    m_shader->addAttribute("vertex", package.vertices);
-    m_vertshader->addAttribute("vertex", package.vertices);
-    m_edgeshader->addAttribute("vertex", package.edgevertices);
-    m_faceshader->addAttribute("vertex", package.facevertices);
+
+    typedef Eigen::Vector3f Vector;
+    const static int vecsize = sizeof(Vector)/sizeof(float);
+    const std::vector<Vector> & verts = package->vertices;
+    auto& packed_indices = package->indices;
+    decltype(verts) faceverts = package->facevertices;
+    const std::vector<unsigned int> & faceindices = package->faceindices;
+    auto& edgeindices = package->edgeindices;
+    decltype(verts) edgeverts = package->edgevertices;
+
+    m_indices = std::make_shared<VertexIndexObject>(
+                (void*)packed_indices.data()
+                , packed_indices.size()
+                , GL_STATIC_DRAW
+                , GL_TRIANGLES);
+
+
+    m_faceindices = std::make_shared<VertexIndexObject>(
+                (void*)faceindices.data()
+                , faceindices.size()
+                , GL_STATIC_DRAW
+                , GL_TRIANGLES);
+
+    m_edgeindices = std::make_shared<VertexIndexObject>(
+                (void*)edgeindices.data()
+                , edgeindices.size()
+                , GL_STATIC_DRAW
+                , GL_LINES);
+
+
+
+
+    auto vbo = std::make_shared<VertexBufferObject>(
+                (void*)verts.data()
+                , vecsize * verts.size()
+                , GL_STATIC_DRAW);
+    m_shader->addAttribute("vertex",
+                           vbo
+                           );
+    m_vertshader->addAttribute("vertex",
+                               vbo
+                               );
+    m_edgeshader->addAttribute("vertex",
+                               std::make_shared<VertexBufferObject>(
+                                   (void*)edgeverts.data()
+                                   , vecsize * edgeverts.size()
+                                   , GL_STATIC_DRAW)
+                               );
+    m_faceshader->addAttribute("vertex",
+                               std::make_shared<VertexBufferObject>(
+                                   (void*)faceverts.data()
+                                   , vecsize * faceverts.size()
+                                   , GL_STATIC_DRAW)
+                               );
 }
 
 
@@ -183,31 +238,11 @@ void GLWidget::paintGL() {
     mat_mvp = mat_p * mat_mv;
 
 
-    if(!m_meshpackage.indices) return;
-    /*
-
-    ShaderProgram * shader;
-    switch(m_renderType)
-    {
-    case RT_FACE: shader = m_faceshader.get(); break;
-    case RT_EDGE: shader = m_edgeshader.get(); break;
-    case RT_VERT: shader = m_vertshader.get(); break;
-    }
-    shader->bind();
-    glUniformMatrix4fv(glGetUniformLocation(shader->programId, "MVP"),
-                       1, GL_FALSE, glm::value_ptr(mat_mvp));
-
-    switch(m_renderType)
-    {
-    case RT_FACE: m_meshpackage.faceindices->render(); break;
-    case RT_EDGE: m_meshpackage.edgeindices->render(); break;
-    case RT_VERT: glDrawArrays(GL_POINTS, 0, m_meshpackage.vertices->size); break;
-    }
-    shader->release();
-    */
+    if(!m_meshpackage) return;
     for(RenderType t: {RT_FACE, RT_EDGE, RT_VERT}) {
         if(m_renderType & t) {
             render(t);
+
         }
     }
     if(m_renderType == 0) {
@@ -227,25 +262,6 @@ std::unique_ptr<ShaderProgram> & GLWidget::shaderSelector(RenderType type) {
     }
 }
 
-/*
-void GLWidget::renderForm(const FormPackage & form) {
-
-    ShaderProgram * shader = shaderSelector(form.type);
-    shader->bind();
-    glUniformMatrix4fv(glGetUniformLocation(shader->programId, "MVP"),
-                       1, GL_FALSE, glm::value_ptr(mat_mvp));
-    GLint attributeId = glGetAttribLocation(shader->programId, "data");
-    form.data->bind(attributeId);
-
-    switch(form.type)
-    {
-    case RT_FACE: m_meshpackage.faceindices->render(); break;
-    case RT_EDGE: m_meshpackage.edgeindices->render(); break;
-    case RT_VERT: glDrawArrays(GL_POINTS, 0, m_meshpackage.vertices->size); break;
-    }
-    shader->release();
-}
-*/
 void GLWidget::render(RenderType type) {
 
     auto&& shader = shaderSelector(type);
@@ -256,10 +272,13 @@ void GLWidget::render(RenderType type) {
                        1, GL_FALSE, glm::value_ptr(mat_mvp));
     switch(type)
     {
-    case RT_NONE: m_meshpackage.indices->render(); break;
-    case RT_FACE: m_meshpackage.faceindices->render(); break;
-    case RT_EDGE: m_meshpackage.edgeindices->render(); break;
-    case RT_VERT: glDrawArrays(GL_POINTS, 0, m_meshpackage.vertices->size); break;
+    case RT_NONE:
+        m_indices->render(); break;
+    case RT_FACE:
+        m_faceindices->render(); break;
+    case RT_EDGE:
+        m_edgeindices->render(); break;
+    case RT_VERT: glDrawArrays(GL_POINTS, 0, m_meshpackage->vertices.size()); break;
     }
     shader->release();
 }
@@ -273,7 +292,7 @@ void GLWidget::keyPressEvent(QKeyEvent *event) {
     case Qt::Key_F: m_renderType ^= RT_FACE; break;
     case Qt::Key_E: m_renderType ^= RT_EDGE; break;
     case Qt::Key_V: m_renderType ^= RT_VERT; break;
-    default: return;
+    default: QGLWidget::keyPressEvent(event); return;
     }
     //If I haven't used the key I'll have already returned, so I should accept the input
     event->accept();

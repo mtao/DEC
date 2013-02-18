@@ -3,6 +3,10 @@ DEC
 
 My DEC (Discrete Exterior Calculus) implementation which now marginally works.  To some degree this was an experiment in how much I could stretch C++ to allow myself to write code "mathematically".
 
+##Documentation
+I've started a doxygen for the source code, but it still needs quite a lot of work (I haven't seriously started commenting the code yet)
+http://www.dgp.toronto.edu/~mtao/dec-doc
+
 ##Requirements
 * gcc4.7 or clang3.1 (or some compiler with decent c++11 support)
 * cmake

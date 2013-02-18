@@ -19,6 +19,7 @@ SET(QTRENDER_HEADERS_TOMOC
 SET(QTRENDER_HEADERS
     ${QTRENDER_HEADERS_TOMOC}
     include/glutil.h
+    include/packages.h
     )
 SET(QTRENDER_RESOURCE
     shaders/shaders.qrc
@@ -28,6 +29,7 @@ SET(QTRENDER_SHADERS
     shaders/shader.130.v.glsl
     shaders/shader.f.glsl
     shaders/shader.130.f.glsl
+    shaders/noneshader.130.v.glsl
     shaders/shader.g.glsl
     shaders/faceshader.g.glsl
     shaders/edgeshader.g.glsl
@@ -48,4 +50,4 @@ INCLUDE(${QT_USE_FILE})
 ADD_DEFINITIONS(${QT_DEFINITIONS})
 
 ADD_EXECUTABLE(qtRender ${QTRENDER_SOURCES} ${QTRENDER_HEADERS} ${QTRENDER_RCC} ${QTRENDER_HEADERS_MOC} ${QTRENDER_SHADERS})
-TARGET_LINK_LIBRARIES(qtRender ${QT_LIBRARIES} GLEW GL arpack)
+TARGET_LINK_LIBRARIES(qtRender ${QT_LIBRARIES} GLEW GL)
