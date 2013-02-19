@@ -10,10 +10,6 @@
 
 #include "packages.h"
 
-
-
-
-
 class MainWindow;
 class GLWidget: public QGLWidget
 {
@@ -45,11 +41,10 @@ private:
     std::unique_ptr<ShaderProgram> m_vertshader;
     std::unique_ptr<ShaderProgram> m_faceshader;
     std::unique_ptr<ShaderProgram> m_edgeshader;
-    std::unique_ptr<VertexIndexObject> m_indices;
-    std::unique_ptr<VertexIndexObject> m_faceindices;
-    std::unique_ptr<VertexIndexObject> m_edgeindices;
-    std::unique_ptr<const MeshPackage> m_meshpackage;
-    int m_num_verts;
+    std::shared_ptr<VertexIndexObject> m_indices;
+    std::shared_ptr<VertexIndexObject> m_faceindices;
+    std::shared_ptr<VertexIndexObject> m_edgeindices;
+    std::shared_ptr<const MeshPackage> m_meshpackage;
     std::map<QString, FormPackage> m_formpackages;
 
     QTime m_time;
@@ -63,7 +58,7 @@ private:
 public slots:
     void disableRendering(){m_doRender =false;}
     void enableRendering(){m_doRender = true;}
-    void recieveMesh(const MeshPackage * package);
+    void recieveMesh(std::shared_ptr<const MeshPackage> package);
     void recieveForm(const FormPackage & package);
     void enableForm(const QString & formname);
 };

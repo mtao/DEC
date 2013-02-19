@@ -27,9 +27,9 @@ SET(QTRENDER_RESOURCE
 SET(QTRENDER_SHADERS
     shaders/shader.v.glsl
     shaders/shader.130.v.glsl
-    shaders/emptyshader.130.v.glsl
     shaders/shader.f.glsl
     shaders/shader.130.f.glsl
+    shaders/noneshader.130.v.glsl
     shaders/shader.g.glsl
     shaders/faceshader.g.glsl
     shaders/edgeshader.g.glsl

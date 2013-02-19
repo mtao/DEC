@@ -8,6 +8,6 @@
         <file>vertshader.g.glsl</file>
         <file>shader.130.v.glsl</file>
         <file>shader.130.f.glsl</file>
-        <file>emptyshader.130.v.glsl</file>
+        <file>noneshader.130.v.glsl</file>
     </qresource>
 </RCC>

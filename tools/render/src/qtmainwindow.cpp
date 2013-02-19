@@ -13,9 +13,6 @@
 #include <random>
 #include <Eigen/SparseCholesky>
 #include <Eigen/IterativeLinearSolvers>
-//#include <Eigen/ArpackSupport>
-//#include <Eigen/CholmodSupport>
-//#include "glutil.h"
 
 MainWindow::MainWindow(QWidget * parent): QMainWindow(parent) {
     setMenuBar(new QMenuBar(this));
@@ -49,39 +46,73 @@ MainWindow::MainWindow(QWidget * parent): QMainWindow(parent) {
     glFormat.setProfile( QGLFormat::CompatibilityProfile );
     glFormat.setSampleBuffers( true );
     m_glwidget = new GLWidget(glFormat,this);
-    connect(this,SIGNAL(meshLoaded(const MeshPackage *))
-            , m_glwidget,SLOT(recieveMesh(const MeshPackage *)));
+    connect(this,SIGNAL(meshLoaded(std::shared_ptr<const MeshPackage>)), m_glwidget,SLOT(recieveMesh(std::shared_ptr<const MeshPackage>)));
     connect(this,SIGNAL(formLoaded(const FormPackage &))
             , m_glwidget,SLOT(recieveForm(const FormPackage &)));
     setCentralWidget(m_glwidget);
 }
-#include <random>
-//Eigen::MatrixXf m;
+
+
+
 void MainWindow::openFile(const QString & filename) {
-    MeshPackage *  package = new MeshPackage;
+    auto package = std::make_shared<MeshPackage>();
     m_mesh.reset(readOBJtoSimplicialComplex<float>(filename.toStdString()));
     std::cout << "Read a mesh with verts:faces: " << m_mesh->vertices().size()<< ":" << m_mesh->numSimplices() << std::endl;
     m_dec.reset(new decltype(m_dec)::element_type(*m_mesh));
     typedef typename TriangleMeshf::Vector Vector;
 
-    std::vector<Eigen::Vector3f> verts = m_mesh->vertices();
+    package->vertices = m_mesh->vertices();//copy here so we can normalize coordinates
+    package->indices = mtao::template simplicesToRenderable<2>(*m_mesh);
+    package->facevertices.resize(package->indices.size());
+    package->faceindices.resize(package->indices.size());
+    package->edgeindices = mtao::simplicesToRenderable<1>(*m_mesh);
+    package->edgevertices.resize(package->edgeindices.size());
+
+
+
+    int i;
+
+
+    auto& verts = package->vertices;
+    auto& packed_indices = package->indices;
+    auto& faceverts = package->facevertices;
+    auto& faceindices = package->faceindices;
+    auto& edgeindices = package->edgeindices;
+    auto& edgeverts = package->edgevertices;
+
     mtao::normalizeInPlace(verts);//Normalize!!
-    package = new MeshPackage{
-        verts,
-            mtao::template simplicesToRenderable<2>(*m_mesh),
-            mtao::template simplicesToRenderable<1>(*m_mesh),
-            verts,
-            mtao::template simplicesToRenderable<2>(*m_mesh),
-            mtao::template simplicesToRenderable<1>(*m_mesh)
-    };
 
+    std::transform(packed_indices.cbegin(), packed_indices.cend(), faceverts.begin(),
+                   [&verts](const unsigned int ind)->typename std::remove_reference<decltype(faceverts)>::type::value_type
+    {
+        return verts[ind];
+    });
 
+    i=0;
+    for(unsigned int & ind: faceindices)
+    {
+        ind = i++;
+    }
 
+    std::transform(edgeindices.cbegin(), edgeindices.cend(), edgeverts.begin(),
+                   [&verts](const unsigned int ind)->typename std::remove_reference<decltype(edgeverts)>::type::value_type
+    {
+        return verts[ind];
+    });
 
-
-
+    i=0;
+    for(unsigned int & ind: edgeindices)
+    {
+        ind = i++;
+    }
 
     m_glwidget->recieveMesh(package);
+    /*
+    m_2form = m_dec->template genForm<PRIMAL_FORM,2>();
+    m_2form.expr = decltype(m_2form.expr)::Zero(m_2form.expr.rows());
+    m_1form = m_dec->template genForm<DUAL_FORM,1>();
+    m_1form.expr = decltype(m_1form.expr)::Zero(m_1form.expr.rows());
+    */
 }
 
 
@@ -105,8 +136,11 @@ void MainWindow::openFile() {
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event) {
-    switch(event->key()) {
-        default: QMainWindow::keyPressEvent(event);return;
+
+    switch(event->key()){
+    default:
+        QMainWindow::keyPressEvent(event);
+        return;
     }
     event->accept();
 }
