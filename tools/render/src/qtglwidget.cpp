@@ -181,6 +181,8 @@ void GLWidget::recieveMesh(std::shared_ptr<const MeshPackage> package) {
 
     typedef Eigen::Vector3f Vector;
 
+    m_meshbuffers.num_dual_verts = package->num_dual_verts;
+
     m_meshbuffers.indices = local_mtao::makevio(package->indices, GL_TRIANGLES);
     m_meshbuffers.faceindices = local_mtao::makevio(package->faceindices, GL_TRIANGLES);
     m_meshbuffers.edgeindices = local_mtao::makevio(package->edgeindices, GL_LINES);
@@ -294,7 +296,7 @@ void GLWidget::render(RenderType type) {
     case RT_VERT:
         if(type & RT_DUAL) {
             m_meshbuffers.dual_vertices->bind(attributeId);
-            glDrawArrays(GL_POINTS, 0, m_meshpackage->dual_vertices.size());
+            glDrawArrays(GL_POINTS, 0, m_meshbuffers.num_dual_verts);//m_meshpackage->dual_vertices.size());
         } else {
             m_meshbuffers.vertices->bind(attributeId);
             glDrawArrays(GL_POINTS, 0, m_meshpackage->vertices.size());

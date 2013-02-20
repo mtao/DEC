@@ -7,6 +7,7 @@
 #include "../../../include/dec.hpp"
 
 struct MeshBuffers {
+    unsigned int num_dual_verts=0;
     std::shared_ptr<VertexBufferObject> vertices;
     std::shared_ptr<VertexIndexObject> indices;
     std::shared_ptr<VertexBufferObject> facevertices;
@@ -21,6 +22,7 @@ struct MeshBuffers {
     std::shared_ptr<VertexIndexObject> dual_edgeindices;
 };
 struct MeshPackage {
+    unsigned int num_dual_verts = 0;
     std::vector<Eigen::Vector3f> vertices;
     std::vector<unsigned int> indices;
     std::vector<Eigen::Vector3f> facevertices;
