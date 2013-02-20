@@ -70,6 +70,8 @@ public:
     template <int M=0>
     const DiagonalMatrix & interior() const
     {return SimplicialComplexPrivateBase<NT,typename SCParent<M>::type >::m_interior;}
+    template <int M=0>
+    const std::map<int,int> & indexToSimplex() const {return SCParent<M>::type::m_indexToSimplex;}
 
 public://protected:
     void init() {}
@@ -110,12 +112,12 @@ public://protected:
     }
     void computeCircumcenter(NSimplex & s)
     {
-        s.center = m_vertices[s.Index()];
+        s.center = m_vertices[s[0]];
     }
     template <int M=0>
-    typename SCParent<M>::NSimplex & simplexByIndex(int ind) {
-        return SCParent<M>::m_simplices[
-            SCParent<M>::m_indexToSimplex[ind]
+    typename SCParent<M>::type::NSimplex & simplexByIndex(int ind) {
+        return SCParent<M>::type::m_simplices[
+            SCParent<M>::type::m_indexToSimplex[ind]
             ];
     }
 
@@ -246,6 +248,8 @@ public:
             SCParent<M>::type::m_indexToSimplex[ind]
             ];
     }
+    template <int M=Dim>
+    const std::map<int,int> & indexToSimplex() const {return SCParent<M>::type::m_indexToSimplex;}
 protected:
     //Builds the n-1 simplices and n <-> n-1 simplices relationships
     void init();

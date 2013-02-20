@@ -4,13 +4,19 @@
 #include <QString>
 #include "glutil.h"
 #include <Eigen/Dense>
-struct MeshPackage2 {
+struct MeshBuffers {
     std::shared_ptr<VertexBufferObject> vertices;
     std::shared_ptr<VertexIndexObject> indices;
     std::shared_ptr<VertexBufferObject> facevertices;
     std::shared_ptr<VertexIndexObject> faceindices;
     std::shared_ptr<VertexBufferObject> edgevertices;
     std::shared_ptr<VertexIndexObject> edgeindices;
+    std::shared_ptr<VertexBufferObject> dual_vertices;
+    std::shared_ptr<VertexIndexObject> dual_indices;
+    std::shared_ptr<VertexBufferObject> dual_facevertices;
+    std::shared_ptr<VertexIndexObject> dual_faceindices;
+    std::shared_ptr<VertexBufferObject> dual_edgevertices;
+    std::shared_ptr<VertexIndexObject> dual_edgeindices;
 };
 struct MeshPackage {
     std::vector<Eigen::Vector3f> vertices;
@@ -19,10 +25,16 @@ struct MeshPackage {
     std::vector<unsigned int> faceindices;
     std::vector<Eigen::Vector3f> edgevertices;
     std::vector<unsigned int> edgeindices;
+    std::vector<Eigen::Vector3f> dual_vertices;
+    std::vector<unsigned int> dual_indices;
+    std::vector<Eigen::Vector3f> dual_facevertices;
+    std::vector<unsigned int> dual_faceindices;
+    std::vector<Eigen::Vector3f> dual_edgevertices;
+    std::vector<unsigned int> dual_edgeindices;
 };
 
 
-enum RenderType {RT_FACE=4, RT_VERT=1, RT_EDGE=2, RT_NONE=0};
+enum RenderType {RT_FACE=4, RT_VERT=1, RT_EDGE=2, RT_NONE=0, RT_DUAL = 8};
 
 struct FormPackage{
     QString title;

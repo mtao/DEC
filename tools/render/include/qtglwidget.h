@@ -41,9 +41,7 @@ private:
     std::unique_ptr<ShaderProgram> m_vertshader;
     std::unique_ptr<ShaderProgram> m_faceshader;
     std::unique_ptr<ShaderProgram> m_edgeshader;
-    std::shared_ptr<VertexIndexObject> m_indices;
-    std::shared_ptr<VertexIndexObject> m_faceindices;
-    std::shared_ptr<VertexIndexObject> m_edgeindices;
+    MeshBuffers m_meshbuffers;
     std::shared_ptr<const MeshPackage> m_meshpackage;
     std::map<QString, FormPackage> m_formpackages;
 
