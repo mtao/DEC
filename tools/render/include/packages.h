@@ -4,6 +4,8 @@
 #include <QString>
 #include "glutil.h"
 #include <Eigen/Dense>
+#include "../../../include/dec.hpp"
+
 struct MeshBuffers {
     std::shared_ptr<VertexBufferObject> vertices;
     std::shared_ptr<VertexIndexObject> indices;
@@ -45,7 +47,10 @@ struct FormPackage{
 namespace mtao{
     template <typename Form>
         constexpr RenderType formToRendertype(const Form &) {
-            return RenderType((Form::Traits::NOut == 0)
+            return RenderType(
+                        (Form::Traits::TypeOut== DUAL_FORM)
+                *RT_DUAL+
+                        (Form::Traits::NOut == 0)
                 *RT_VERT+
             (Form::Traits::NOut == 1)
                 * RT_EDGE+
@@ -55,9 +60,9 @@ namespace mtao{
 
         }
     template <typename Form>
-        FormPackage makeFormPackage(const QString & name, const Form & form)
+        FormPackage makeFormPackage(const QString & name, const Form & form, const std::vector<unsigned int> & indices = std::vector<unsigned int>())
         {
-            auto&& tmparr = formToRenderable(form);
+            auto&& tmparr = formToRenderable(form, indices);
             return  {name,formToRendertype(form), std::make_shared<VertexBufferObject>(
                     tmparr.data(),
                     (Form::Traits::NOut+1)*tmparr.size(),

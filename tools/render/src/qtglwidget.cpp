@@ -56,7 +56,7 @@ void GLWidget::initializeGL() {
     glEnable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
     glEnable(GL_MULTISAMPLE);
-    glLineWidth(2.0);
+    //glLineWidth(2.0);
 }
 void GLWidget::initShader(ShaderProgram & program, const QString & geotype)
 {

@@ -21,11 +21,42 @@ std::vector<unsigned int> simplicesToRenderable(const SimplicialComplex & sc)
     }
     return ret;
 }
+
 template <typename Form>
-auto formToRenderable(const Form & form) -> std::vector<std::array<float,Form::Traits::NOut+1> > {
-    std::vector<std::array<float,Form::Traits::NOut+1> > ret(form.expr.rows());
+constexpr unsigned int MeshSize() {
+    return (Form::Traits::TypeOut == PRIMAL_FORM) *
+        Form::Traits::NOut+1 +
+    (Form::Traits::TypeOut == DUAL_FORM) *
+        Form::Traits::Dim-Form::Traits::NOut+1;
+}
+template <typename Form>
+constexpr bool shouldFormGenUseIndices() {
+    return (Form::Traits::NOut == 2 && Form::Traits::TypeOut == DUAL_FORM);
+}
+
+template <typename Form>
+auto formToRenderable(const Form & form
+                      , const std::vector<unsigned int> & indices = std::vector<unsigned int>()
+        ) -> std::vector<std::array<float,MeshSize<Form>() > > {
+    std::vector<
+            std::array<float,MeshSize<Form>() >
+            > ret(shouldFormGenUseIndices<Form>()
+                                                    ?
+                                                      indices.back()
+                                                    :
+                                                        form.expr.rows());
+    if(!shouldFormGenUseIndices<Form>()) {
     for(int i=0; i < form.expr.rows(); ++i) {
         ret[i].fill(form.expr(i));
+    }
+    } else {
+        unsigned int j=0;
+        for(int i=0; i < indices.size(); ++i) {
+            const unsigned int maxind = indices[i];
+            for(;j<maxind; ++j) {
+                ret[j].fill(form.expr(i));
+            }
+        }
     }
     return ret;
 }

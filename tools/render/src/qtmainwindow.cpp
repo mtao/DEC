@@ -137,6 +137,10 @@ void MainWindow::openFile(const QString & filename) {
     typedef typename decltype(m_dec)::element_type::SparseMatrixColMajor SparseMatrix;
     const SparseMatrix & d0 = m_dec->template d<0>().expr;
     const SparseMatrix & d1 = m_dec->template d<1>().expr;
+    /*
+    const SparseMatrix & b2 = m_mesh->template b<2>();
+    const SparseMatrix & b1 = m_mesh->template b<1>();
+    */
 
 
 
@@ -195,7 +199,10 @@ void MainWindow::openFile(const QString & filename) {
     dual_faceindices.clear();
     dual_faceverts.reserve(3*m_mesh->template numSimplices<2>());
 
+    m_dual_vertex_form_indices.clear();
+    m_dual_vertex_form_indices.reserve(m_mesh->template numSimplices<0>());
 
+    int count=0;
     for(int i=0; i < m_mesh->template simplices<0>().size(); ++i) {
         auto&& s0 = m_mesh->template simplexByIndex<0>(i);
 
@@ -208,8 +215,10 @@ void MainWindow::openFile(const QString & filename) {
                 dual_faceverts.push_back(s0.Center());
                 dual_faceverts.push_back(s1.Center());
                 dual_faceverts.push_back(s2.Center());
+                ++count;
             }
         }
+        m_dual_vertex_form_indices.push_back(count);
     }
 
 
@@ -263,9 +272,9 @@ void MainWindow::openFile(const QString & filename) {
     m_1form.expr = decltype(m_1form.expr)::Ones(m_1form.expr.rows());
     auto m_0form = m_dec->template genForm<DUAL_FORM,0>();
     m_0form.expr = decltype(m_0form.expr)::Zero(m_0form.expr.rows());
-    emit formLoaded(mtao::makeFormPackage("test0", m_0form));
-    emit formLoaded(mtao::makeFormPackage("test1", m_1form));
-    emit formLoaded(mtao::makeFormPackage("test2", m_2form));
+    emit formLoaded(makeFormPackage("test0", m_0form));
+    emit formLoaded(makeFormPackage("test1", m_1form));
+    emit formLoaded(makeFormPackage("test2", m_2form));
 }
 
 
