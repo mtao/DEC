@@ -2,16 +2,41 @@
 #include "../../../include/io.hpp"
 #include "../../../include/util.hpp"
 #include "../../../include/render.hpp"
+#include "include/mainwindow.h"
+#include "include/packages.h"
+#include <random>
+class ExampleWidget: public MainWindow
+{
+    public:
+    ExampleWidget(QWidget * parent=0);
+protecetd:
+void openFile(const QString & filename);
 
-LogicWidget::LogicWidget(QWidget * parent): QWidget(parent){
+void keyPressEvent(QKeyEvent *);
+    private:
+decltype(m_dec->template genForm<PRIMAL_FORM,0>()) p0form;
+decltype(m_dec->template genForm<PRIMAL_FORM,1>()) p1form;
+decltype(m_dec->template genForm<PRIMAL_FORM,2>()) p2form;
+decltype(m_dec->template genForm<DUAL_FORM  ,0>()) p0form;
+decltype(m_dec->template genForm<DUAL_FORM  ,1>()) p1form;
+decltype(m_dec->template genForm<DUAL_FORM  ,2>()) p2form;
+};
+
+ExampleWidget::ExampleWidget(QWidget * parent): MainWindow(parent){
   grabKeyboard();
 }
-void LogicWidget::openFile(const QString & filename) {
+void ExampleWidget::openFile(const QString & filename) {
     MainWindow::openFile(filename);
+    p2form = m_dec->template genForm<PRIMAL_FORM,2>();
+    p1form = m_dec->template genForm<PRIMAL_FORM,1>();
+    p0form = m_dec->template genForm<PRIMAL_FORM,0>();
 
+    p2form = m_dec->template genForm<DUAL_FORM,2>();
+    p1form = m_dec->template genForm<DUAL_FORM,1>();
+    p0form = m_dec->template genForm<DUAL_FORM,0>();
 }
-#ifdef LKJWAJWAETIAWJTAET
-/*
+
+void ExampleWidget::KeyPressEvent(QKeyEvent * event) {
 
     static std::default_random_engine generator;
     FormPackage fpackage;
@@ -37,6 +62,8 @@ void LogicWidget::openFile(const QString & filename) {
 
     m_glwidget->recieveForm(mtao::makeFormPackage("Test1",m_1form));
         break;
+    }
+}
 
 
 
