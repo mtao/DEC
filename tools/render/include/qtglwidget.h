@@ -9,6 +9,7 @@
 #include <QVector3D>
 
 #include "packages.h"
+bool operator<(const FormPackage & a, const FormPackage & b);
 
 class MainWindow;
 class GLWidget: public QGLWidget
@@ -30,8 +31,8 @@ private:
     void initShader(ShaderProgram & program, const QString & geotype);
     GLuint compileShader(GLenum shaderType, const QString & fileName);
     std::unique_ptr<ShaderProgram> & shaderSelector(RenderType type);
-    void render(RenderType type);
-    //    void renderForm(const FormPackage & form);
+    //void render(RenderType type);
+    void renderForm(const FormPackage & form);
     QTimer* m_timer = 0;
     int m_renderType = RT_NONE;
     bool m_doRender = false;
@@ -44,6 +45,7 @@ private:
     MeshBuffers m_meshbuffers;
     std::shared_ptr<const MeshPackage> m_meshpackage;
     std::map<QString, FormPackage> m_formpackages;
+    std::set<QString> m_active_forms;
 
     QTime m_time;
     int m_lastTime = 0;

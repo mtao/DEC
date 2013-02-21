@@ -178,6 +178,8 @@ std::shared_ptr<VertexBufferObject> makevbo(const std::vector<Eigen::Vector3f> &
 
 void GLWidget::recieveMesh(std::shared_ptr<const MeshPackage> package) {
     m_meshpackage = package;
+    m_formpackages.clear();
+    m_active_forms.clear();
 
     typedef Eigen::Vector3f Vector;
 
@@ -231,6 +233,7 @@ void GLWidget::paintGL() {
 
 
     if(!m_meshpackage) return;
+    /*
     for(RenderType t: {RT_FACE, RT_EDGE, RT_VERT}) {
         if(m_renderType & t) {
             render(static_cast<RenderType>(t |(RT_DUAL & m_renderType)));
@@ -239,6 +242,10 @@ void GLWidget::paintGL() {
     }
     if((m_renderType & ~RT_DUAL) == 0) {
         render(RT_NONE);
+    }
+    */
+    for(auto&& str: m_active_forms) {
+        renderForm(m_formpackages[str]);
     }
 
 }
@@ -255,52 +262,56 @@ std::unique_ptr<ShaderProgram> & GLWidget::shaderSelector(RenderType type) {
     return m_shader;
 }
 
-void GLWidget::render(RenderType type) {
+//void GLWidget::render(RenderType type) {
+void GLWidget::renderForm(const FormPackage & form) {
 
+    const RenderType type = form.type;
+    //qWarning() << static_cast<int>(type);
     auto&& shader = shaderSelector(type);
     shader->bind(false);
-    GLint attributeId = shader->getAttribLocation("vertex");
+    const GLint vertexAttribId = shader->getAttribLocation("vertex");
+    const GLint dataAttribId = shader->getAttribLocation("data");
+
+    form.data->bind(dataAttribId);
+
+
     glUniformMatrix4fv(glGetUniformLocation(shader->programId, "MV"),
                        1, GL_FALSE, glm::value_ptr(mat_mv));
     glUniformMatrix4fv(glGetUniformLocation(shader->programId, "MVP"),
                        1, GL_FALSE, glm::value_ptr(mat_mvp));
-    switch(type & ~RT_DUAL)
+    switch(static_cast<char>(type))
     {
-    case RT_NONE:
-        if(type & RT_DUAL) {
-            m_meshbuffers.dual_vertices->bind(attributeId);
+    case RT_NONE | RT_DUAL:
+            m_meshbuffers.dual_vertices->bind(vertexAttribId);
             m_meshbuffers.dual_indices->render();
-        } else {
-            m_meshbuffers.vertices->bind(attributeId);
+            break;
+    case RT_NONE:
+            m_meshbuffers.vertices->bind(vertexAttribId);
             m_meshbuffers.indices->render();
-        }
-        break;
-    case RT_FACE:
-        if(type & RT_DUAL) {
-            m_meshbuffers.dual_facevertices->bind(attributeId);
+            break;
+    case RT_FACE | RT_DUAL:
+            m_meshbuffers.dual_facevertices->bind(vertexAttribId);
             m_meshbuffers.dual_faceindices->render();
-        } else {
-            m_meshbuffers.facevertices->bind(attributeId);
+            break;
+    case RT_FACE:
+            m_meshbuffers.facevertices->bind(vertexAttribId);
             m_meshbuffers.faceindices->render();
-        }
-        break;
-    case RT_EDGE:
-        if(type & RT_DUAL) {
-            m_meshbuffers.dual_edgevertices->bind(attributeId);
+            break;
+    case RT_EDGE | RT_DUAL:
+            m_meshbuffers.dual_edgevertices->bind(vertexAttribId);
             m_meshbuffers.dual_edgeindices->render();
-        } else {
-            m_meshbuffers.edgevertices->bind(attributeId);
+            break;
+    case RT_EDGE:
+            m_meshbuffers.edgevertices->bind(vertexAttribId);
             m_meshbuffers.edgeindices->render();
-        }
-        break;
-    case RT_VERT:
-        if(type & RT_DUAL) {
-            m_meshbuffers.dual_vertices->bind(attributeId);
+            break;
+    case RT_VERT | RT_DUAL:
+            m_meshbuffers.dual_vertices->bind(vertexAttribId);
             glDrawArrays(GL_POINTS, 0, m_meshbuffers.num_dual_verts);//m_meshpackage->dual_vertices.size());
-        } else {
-            m_meshbuffers.vertices->bind(attributeId);
+            break;
+    case RT_VERT:
+            m_meshbuffers.vertices->bind(vertexAttribId);
             glDrawArrays(GL_POINTS, 0, m_meshpackage->vertices.size());
-        }
         break;
     }
     shader->release();
@@ -364,7 +375,13 @@ void GLWidget::wheelEvent(QWheelEvent *event)
 }
 
 void GLWidget::enableForm(const QString &formname) {
+    /*
     auto&& form = m_formpackages[formname];
     shaderSelector(form.type)->addAttribute("data", form.data);
+    */
+    m_active_forms.insert(formname);
     //m_renderType ^= form.type;
+}
+bool operator<(const FormPackage & a, const FormPackage & b) {
+    return a.title < b.title;
 }

@@ -24,10 +24,13 @@ std::vector<unsigned int> simplicesToRenderable(const SimplicialComplex & sc)
 
 template <typename Form>
 constexpr unsigned int MeshSize() {
+    return Form::Traits::NOut+1;
+    /*
     return (Form::Traits::TypeOut == PRIMAL_FORM) *
-        Form::Traits::NOut+1 +
+        (Form::Traits::NOut+1) +
     (Form::Traits::TypeOut == DUAL_FORM) *
-        Form::Traits::Dim-Form::Traits::NOut+1;
+        (Form::Traits::Dim-Form::Traits::NOut+1);
+        */
 }
 template <typename Form>
 constexpr bool shouldFormGenUseIndices() {

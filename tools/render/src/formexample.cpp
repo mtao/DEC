@@ -1,25 +1,26 @@
-#include "include/formexample.h"
 #include "../../../include/io.hpp"
 #include "../../../include/util.hpp"
 #include "../../../include/render.hpp"
-#include "include/mainwindow.h"
-#include "include/packages.h"
+#include "../include/qtmainwindow.h"
+#include "../include/packages.h"
 #include <random>
 class ExampleWidget: public MainWindow
 {
     public:
     ExampleWidget(QWidget * parent=0);
-protecetd:
+public:
 void openFile(const QString & filename);
 
-void keyPressEvent(QKeyEvent *);
+protected:
+
+//void keyPressEvent(QKeyEvent *);
     private:
 decltype(m_dec->template genForm<PRIMAL_FORM,0>()) p0form;
 decltype(m_dec->template genForm<PRIMAL_FORM,1>()) p1form;
 decltype(m_dec->template genForm<PRIMAL_FORM,2>()) p2form;
-decltype(m_dec->template genForm<DUAL_FORM  ,0>()) p0form;
-decltype(m_dec->template genForm<DUAL_FORM  ,1>()) p1form;
-decltype(m_dec->template genForm<DUAL_FORM  ,2>()) p2form;
+decltype(m_dec->template genForm<DUAL_FORM  ,0>()) d0form;
+decltype(m_dec->template genForm<DUAL_FORM  ,1>()) d1form;
+decltype(m_dec->template genForm<DUAL_FORM  ,2>()) d2form;
 };
 
 ExampleWidget::ExampleWidget(QWidget * parent): MainWindow(parent){
@@ -31,11 +32,26 @@ void ExampleWidget::openFile(const QString & filename) {
     p1form = m_dec->template genForm<PRIMAL_FORM,1>();
     p0form = m_dec->template genForm<PRIMAL_FORM,0>();
 
-    p2form = m_dec->template genForm<DUAL_FORM,2>();
-    p1form = m_dec->template genForm<DUAL_FORM,1>();
-    p0form = m_dec->template genForm<DUAL_FORM,0>();
+    d2form = m_dec->template genForm<DUAL_FORM,2>();
+    d1form = m_dec->template genForm<DUAL_FORM,1>();
+    d0form = m_dec->template genForm<DUAL_FORM,0>();
+
+    p0form.expr = decltype(p0form.expr)::Random(p0form.expr.rows());
+    p1form.expr = decltype(p1form.expr)::Random(p1form.expr.rows());
+    p2form.expr = decltype(p2form.expr)::Random(p2form.expr.rows());
+
+    d0form.expr = decltype(d0form.expr)::Random(d0form.expr.rows());
+    d1form.expr = decltype(d1form.expr)::Random(d1form.expr.rows());
+    d2form.expr = decltype(d2form.expr)::Random(d2form.expr.rows());
+    emit formLoaded(makeFormPackage("p0", p0form));
+    emit formLoaded(makeFormPackage("p1", p1form));
+    emit formLoaded(makeFormPackage("p2", p2form));
+    emit formLoaded(makeFormPackage("d0", d0form));
+    emit formLoaded(makeFormPackage("d1", d1form));
+    emit formLoaded(makeFormPackage("d2", d2form));
 }
 
+#ifdef FAKENESS
 void ExampleWidget::KeyPressEvent(QKeyEvent * event) {
 
     static std::default_random_engine generator;
@@ -197,3 +213,17 @@ void MainWindow::openFile() {
 }
 */
 #endif
+
+#include <QApplication>
+int main(int argc, char * argv[]) {
+    QApplication a(argc,argv);
+    ExampleWidget * mw = new ExampleWidget(); 
+    QStringList args = a.arguments();
+    if(args.size() > 1) {
+        mw->openFile(args[1]);
+    }
+    mw->show();
+    
+
+    return a.exec();
+}

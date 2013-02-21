@@ -287,16 +287,6 @@ void MainWindow::openFile(const QString & filename) {
 
 
     emit meshLoaded(package);
-    auto m_2form = m_dec->template genForm<PRIMAL_FORM,2>();
-    m_2form.expr = decltype(m_2form.expr)::Zero(m_2form.expr.rows());
-    auto m_1form = m_dec->template genForm<DUAL_FORM,1>();
-    m_1form.expr = decltype(m_1form.expr)::Zero(m_1form.expr.rows());
-    m_1form.expr = decltype(m_1form.expr)::Ones(m_1form.expr.rows());
-    auto m_0form = m_dec->template genForm<DUAL_FORM,0>();
-    m_0form.expr = decltype(m_0form.expr)::Zero(m_0form.expr.rows());
-    emit formLoaded(makeFormPackage("test0", m_0form));
-    emit formLoaded(makeFormPackage("test1", m_1form));
-    emit formLoaded(makeFormPackage("test2", m_2form));
 }
 
 
