@@ -58,8 +58,10 @@ private:
 public slots:
     void disableRendering(){m_doRender =false;}
     void enableRendering(){m_doRender = true;}
-    void recieveMesh(std::shared_ptr<const MeshPackage> package);
-    void recieveForm(const FormPackage & package);
+    void receiveMesh(std::shared_ptr<const MeshPackage> package);
+    void receiveForm(const FormPackage & package);
     void enableForm(const QString & formname);
+    void disableForm(const QString & name);
+    void clearForms();
 };
 #endif

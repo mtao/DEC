@@ -9,12 +9,13 @@
 #include <QFileDialog>
 #include <QDir>
 #include <QKeyEvent>
+#include <QDockWidget>
 #include <iostream>
 #include <random>
 #include <Eigen/SparseCholesky>
 #include <Eigen/IterativeLinearSolvers>
 
-MainWindow::MainWindow(QWidget * parent): QMainWindow(parent) {
+MainWindow::MainWindow(QWidget * parent, FormBar * bar): QMainWindow(parent), m_formbar(bar) {
     setMenuBar(new QMenuBar(this));
     QMenu *fileMenu = menuBar() -> addMenu(tr("&File"));
     QAction *openAct = new QAction(tr("&Open"), this);
@@ -46,10 +47,31 @@ MainWindow::MainWindow(QWidget * parent): QMainWindow(parent) {
     glFormat.setProfile( QGLFormat::CompatibilityProfile );
     glFormat.setSampleBuffers( true );
     m_glwidget = new GLWidget(glFormat,this);
-    connect(this,SIGNAL(meshLoaded(std::shared_ptr<const MeshPackage>)), m_glwidget,SLOT(recieveMesh(std::shared_ptr<const MeshPackage>)));
+    connect(this,SIGNAL(meshLoaded(std::shared_ptr<const MeshPackage>)), m_glwidget,SLOT(receiveMesh(std::shared_ptr<const MeshPackage>)));
     connect(this,SIGNAL(formLoaded(const FormPackage &))
-            , m_glwidget,SLOT(recieveForm(const FormPackage &)));
+            , m_glwidget,SLOT(receiveForm(const FormPackage &)));
     setCentralWidget(m_glwidget);
+
+
+
+    QDockWidget * dock = new QDockWidget(tr("Form Chooser"),this);
+    if(!m_formbar) {
+        m_formbar = new FormBar(this);
+    }
+    dock->setWidget(m_formbar);
+    addDockWidget(Qt::LeftDockWidgetArea, dock);
+    connect(this,SIGNAL(formLoaded(const FormPackage &))
+            , m_formbar,SLOT(receiveForm(const FormPackage &)));
+    connect(
+            m_formbar, SIGNAL(enableForm(const QString &)),
+            m_glwidget, SLOT(enableForm(const QString &)));
+    connect(
+            m_formbar, SIGNAL(disableForm(const QString &)),
+            m_glwidget, SLOT(disableForm(const QString &)));
+    connect(
+            m_formbar, SIGNAL(clearForms(void)),
+            m_glwidget, SLOT(clearForms(void)));
+
 }
 
 

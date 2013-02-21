@@ -10,10 +10,12 @@ SET(LIBDECRENDER_SOURCES
     src/qtmainwindow.cpp
     src/glutil.cpp
     src/qtglwidget.cpp
+    src/formbar.cpp
     )
 SET(LIBDECRENDER_HEADERS_TOMOC
     include/qtmainwindow.h
     include/qtglwidget.h
+    include/formbar.h
     )
 SET(LIBDECRENDER_HEADERS
     ${LIBDECRENDER_HEADERS_TOMOC}

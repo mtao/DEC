@@ -176,10 +176,10 @@ std::shared_ptr<VertexBufferObject> makevbo(const std::vector<Eigen::Vector3f> &
 }
 };
 
-void GLWidget::recieveMesh(std::shared_ptr<const MeshPackage> package) {
+void GLWidget::receiveMesh(std::shared_ptr<const MeshPackage> package) {
     m_meshpackage = package;
     m_formpackages.clear();
-    m_active_forms.clear();
+    //m_active_forms.clear();
 
     typedef Eigen::Vector3f Vector;
 
@@ -209,9 +209,8 @@ void GLWidget::recieveMesh(std::shared_ptr<const MeshPackage> package) {
 
 
 
-void GLWidget::recieveForm(const FormPackage &package) {
+void GLWidget::receiveForm(const FormPackage &package) {
     m_formpackages[package.title] = package;
-    enableForm(package.title);//TODO: make an interface for enabling/disabling forms instead of rendering the last n-form we've seen
 }
 
 
@@ -244,8 +243,23 @@ void GLWidget::paintGL() {
         render(RT_NONE);
     }
     */
+    bool renderedSomething=true;
     for(auto&& str: m_active_forms) {
-        renderForm(m_formpackages[str]);
+        if(m_formpackages.find(str) != m_formpackages.end()) {
+            renderForm(m_formpackages[str]);
+            renderedSomething = true;
+        }
+    }
+    if(!renderedSomething) {
+        m_shader->bind(false);
+        glUniformMatrix4fv(glGetUniformLocation(m_shader->programId, "MV"),
+                1, GL_FALSE, glm::value_ptr(mat_mv));
+        glUniformMatrix4fv(glGetUniformLocation(m_shader->programId, "MVP"),
+                1, GL_FALSE, glm::value_ptr(mat_mvp));
+        const GLint vertexAttribId = m_shader->getAttribLocation("vertex");
+        m_meshbuffers.vertices->bind(vertexAttribId);
+        m_meshbuffers.indices->render();
+        m_shader->release();
     }
 
 }
@@ -375,13 +389,19 @@ void GLWidget::wheelEvent(QWheelEvent *event)
 }
 
 void GLWidget::enableForm(const QString &formname) {
-    /*
-    auto&& form = m_formpackages[formname];
-    shaderSelector(form.type)->addAttribute("data", form.data);
-    */
-    m_active_forms.insert(formname);
-    //m_renderType ^= form.type;
+    if(m_formpackages.find(formname) != m_formpackages.end()) {
+        m_active_forms.insert(formname);
+    }
+}
+void GLWidget::disableForm(const QString &formname) {
+    m_active_forms.erase(formname);
+}
+void GLWidget::clearForms() {
+    m_active_forms.clear();
 }
 bool operator<(const FormPackage & a, const FormPackage & b) {
     return a.title < b.title;
 }
+
+
+

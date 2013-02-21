@@ -17,6 +17,7 @@
 
 #Temporary files
 *~
+*.swp
 
 #Build directories
 build*

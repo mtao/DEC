@@ -4,11 +4,13 @@
 #include "../include/qtglwidget.h"
 #include "../../../include/dec.hpp"
 #include "packages.h"
+#include "formbar.h"
+
 
 class MainWindow: public QMainWindow {
     Q_OBJECT
 public:
-    MainWindow(QWidget *parent = 0);
+    MainWindow(QWidget *parent = 0,FormBar * bar = 0);
 
 protected:
     void keyPressEvent(QKeyEvent *);
@@ -28,6 +30,7 @@ protected:
     {
         return mtao::makeFormPackage(name, form, m_dual_vertex_form_indices);
     }
+    FormBar * m_formbar = 0;
 signals:
     void meshLoaded(std::shared_ptr<const MeshPackage> package);
     //void meshLoaded(const MeshPackage2 & package);
