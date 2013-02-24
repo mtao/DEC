@@ -56,6 +56,10 @@ void ExampleWidget::openFile(const QString & filename) {
     emit formLoaded(makeFormPackage("d0", d0form));
     emit formLoaded(makeFormPackage("d1", d1form));
     emit formLoaded(makeFormPackage("d2", d2form));
+    Eigen::Matrix<double,3,3> m = decltype(m)::Random();
+    mtao::gramSchmidt(m);
+    std::cout << m << std::endl;
+    std::cout << m.transpose() * m << std::endl;
     /*
     Particle<DEC<TriangleMeshf, true> > p(*m_dec,Vector(1,1,1));
     std::vector<Vector> ps;

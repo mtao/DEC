@@ -51,20 +51,19 @@ std::vector<Vector> normalize(const std::vector<Vector> & vertices) {
 
 
 template <typename Matrix>
-void orthogonalize(Matrix & basis) {
+void gramSchmidt(Matrix & basis) {
     for(int i=0; i < basis.cols(); ++i) {
         basis.col(i).normalize();
-        for(int j=i+1; j < basis.cols(); ++j) {
-            basis.col(j) -= basis.col(i).dot(basis.col(j)) * basis.col(i);
-        }
+        basis.rightCols(basis.cols()-i-1) -=  basis.col(i) *  (basis.col(i).transpose() * basis.rightCols(basis.cols()-i-1));
     }
+    basis.col(basis.cols()-1).normalize();
 }
 
 template <typename Matrix>
 auto normal(Matrix & basis) -> Eigen::Matrix<typename Matrix::Scalar, Matrix::RowsAtCompileTime, 1>{
     typedef Eigen::Matrix<typename Matrix::Scalar, Matrix::RowsAtCompileTime, 1> Vector;
     typedef typename Vector::Scalar Scalar;
-    orthogonalize(basis);
+    gramSchmidt(basis);
 
     Vector v;
     while(true){
