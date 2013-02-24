@@ -44,4 +44,13 @@ struct NumericalTraits
 typedef NumericalTraits<float,Eigen::Dynamic> NumericalTraitsXf;
 typedef NumericalTraits<double,Eigen::Dynamic> NumericalTraitsXd;
 
+template <int Top_, int Dim_>
+struct DimensionalTraits {
+    const static int Top = Top_;
+    const static int Dim = Dim_;
+    typedef DimensionalTraits<Top,Dim-1> LowerTraits;
+    typedef DimensionalTraits<Top,Dim+1> UpperTraits;
+    typedef DimensionalTraits<Top,Top> TopTraits;
+    typedef DimensionalTraits<Top,0> BottomTraits;
+};
 #endif

@@ -38,7 +38,7 @@ struct VertexBufferObject
       */
     VertexBufferObject(): owner(false) {}
     VertexBufferObject(GLvoid *data, GLsizei size, GLenum usage=GL_STATIC_DRAW,
-                       int tupleSize=3, GLenum type=GL_FLOAT, GLboolean normalized=GL_FALSE,
+                       int tupleSize=1, GLenum type=GL_FLOAT, GLboolean normalized=GL_FALSE,
                        GLsizei stride=0, GLvoid * offset=0);
     void bind(GLint attributeId);
     ~VertexBufferObject();

@@ -33,6 +33,7 @@ protected:
     FormBar * m_formbar = 0;
 signals:
     void meshLoaded(std::shared_ptr<const MeshPackage> package);
+    void particlesLoaded(std::shared_ptr<VertexBufferObject> vbo);
     //void meshLoaded(const MeshPackage2 & package);
     void formLoaded(const FormPackage & package);
     void dataLoaded();

@@ -21,6 +21,7 @@ struct MeshBuffers {
     std::shared_ptr<VertexBufferObject> dual_edgevertices;
     std::shared_ptr<VertexIndexObject> dual_edgeindices;
 };
+
 struct MeshPackage {
     unsigned int num_dual_verts = 0;
     std::vector<Eigen::Vector3f> vertices;
@@ -38,7 +39,7 @@ struct MeshPackage {
 };
 
 
-enum RenderType {RT_FACE=4, RT_VERT=1, RT_EDGE=2, RT_NONE=0, RT_DUAL = 8};
+enum RenderType {RT_FACE=4, RT_VERT=1, RT_EDGE=2, RT_NONE=0, RT_PARTICLE=8, RT_DUAL = 16};
 
 struct FormPackage{
     QString title;

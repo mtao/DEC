@@ -1,30 +1,37 @@
 #include "../../../include/io.hpp"
 #include "../../../include/util.hpp"
 #include "../../../include/render.hpp"
+//#include "../../../include/advection.hpp"
 #include "../include/qtmainwindow.h"
 #include "../include/packages.h"
+#include <Eigen/SparseCholesky>
+#include <Eigen/IterativeLinearSolvers>
 #include <random>
+#include <QKeyEvent>
 class ExampleWidget: public MainWindow
 {
-    public:
+public:
     ExampleWidget(QWidget * parent=0);
 public:
-void openFile(const QString & filename);
+    void openFile(const QString & filename);
 
 protected:
 
-//void keyPressEvent(QKeyEvent *);
-    private:
-decltype(m_dec->template genForm<PRIMAL_FORM,0>()) p0form;
-decltype(m_dec->template genForm<PRIMAL_FORM,1>()) p1form;
-decltype(m_dec->template genForm<PRIMAL_FORM,2>()) p2form;
-decltype(m_dec->template genForm<DUAL_FORM  ,0>()) d0form;
-decltype(m_dec->template genForm<DUAL_FORM  ,1>()) d1form;
-decltype(m_dec->template genForm<DUAL_FORM  ,2>()) d2form;
+    void keyPressEvent(QKeyEvent *);
+private:
+    typedef typename TriangleMeshf::Vector Vector;
+    Vector v;
+    void solveThings();
+    decltype(m_dec->template genForm<PRIMAL_FORM,0>()) p0form;
+    decltype(m_dec->template genForm<PRIMAL_FORM,1>()) p1form;
+    decltype(m_dec->template genForm<PRIMAL_FORM,2>()) p2form;
+    decltype(m_dec->template genForm<DUAL_FORM  ,0>()) d0form;
+    decltype(m_dec->template genForm<DUAL_FORM  ,1>()) d1form;
+    decltype(m_dec->template genForm<DUAL_FORM  ,2>()) d2form;
 };
-
+#include <iostream>
 ExampleWidget::ExampleWidget(QWidget * parent): MainWindow(parent){
-  grabKeyboard();
+    grabKeyboard();
 }
 void ExampleWidget::openFile(const QString & filename) {
     MainWindow::openFile(filename);
@@ -49,40 +56,67 @@ void ExampleWidget::openFile(const QString & filename) {
     emit formLoaded(makeFormPackage("d0", d0form));
     emit formLoaded(makeFormPackage("d1", d1form));
     emit formLoaded(makeFormPackage("d2", d2form));
+    /*
+    Particle<DEC<TriangleMeshf, true> > p(*m_dec,Vector(1,1,1));
+    std::vector<Vector> ps;
+    ps.resize(20);
+    for(int i=1; i < ps.size(); ++i) {
+        ps[i] = p.p();
+    }
+    //emit particlesLoaded(std::make_shared<VertexBufferObject>(&p.p()(0),1,GL_STATIC_DRAW,3));
+    emit particlesLoaded(std::make_shared<VertexBufferObject>((void*)ps.data(),ps.size(),GL_STATIC_DRAW,3));
+    */
 }
 
-#ifdef FAKENESS
-void ExampleWidget::KeyPressEvent(QKeyEvent * event) {
+void ExampleWidget::keyPressEvent(QKeyEvent * event) {
 
-    static std::default_random_engine generator;
-    FormPackage fpackage;
-        std::uniform_int_distribution<int> rand;
     switch(event->key()) {
     case Qt::Key_R:
-        randomData();
         break;
     case Qt::Key_T:
-        m_1form.expr = decltype(m_1form.expr)::Zero(m_1form.expr.rows());
-        rand = std::uniform_int_distribution<int>(0,m_1form.expr.rows()-1);
-        //for(int i=0; i < rand(generator); ++i)
-        m_1form.expr(rand(generator)) = 10;
-    //m_2form.expr = decltype(m_2form.expr)::Random(m_2form.expr.rows());
-#ifdef CHECK_INTERIORS
-        dumb ^= true;
-        randomData();
-        return;
-#else
-        dumb = true;
-#endif
-
-
-    m_glwidget->recieveForm(mtao::makeFormPackage("Test1",m_1form));
+        solveThings();
         break;
     }
 }
 
+#include <iostream>
+void ExampleWidget::solveThings() {
+    static std::default_random_engine generator;
+    std::uniform_int_distribution<int> rand;
+    p1form.expr = decltype(p2form.expr)::Zero(p1form.expr.rows());
+    rand = std::uniform_int_distribution<int>(0,p1form.expr.rows()-1);
+    p1form.expr(rand(generator)) = 1;
+    emit formLoaded(makeFormPackage("initialVelocity", p1form));
+
+    p2form = m_dec->d(p1form);
+    emit formLoaded(makeFormPackage("rhs", p2form));
+
+    Eigen::SparseMatrix<float> dhdh = m_dec->d(m_dec->h(m_dec->d(m_dec->template h<2>()))).expr.eval();
+
+    typename Eigen::ConjugateGradient<decltype(dhdh), Eigen::Lower, typename Eigen::SimplicialLDLT<decltype(dhdh)> > chol;
+    chol.setMaxIterations(dhdh.rows()/5);
+    chol.setTolerance(0.001);
+    //typename Eigen::ConjugateGradient<decltype(dhdh), Eigen::Lower, typename Eigen::CholmodBaseSupernodalLLT<decltype(dhdh)> > chol;
+    chol.compute(dhdh);
+    if(chol.info() != Eigen::Success)
+    {
+        std::cout << "Failed at dec->mposition" << std::endl;
+    }
+    Eigen::VectorXf ret = chol.solve(p2form.expr);//solve poisson problem
+    if(chol.info() != Eigen::Success)
+    {
+        std::cout << "Failed at solving" << std::endl;
+    }
+    p2form.expr = ret / ret.lpNorm<Eigen::Infinity>();
+    emit formLoaded(makeFormPackage("pressure", p2form));
+    p1form.expr = m_dec->d(m_dec->h(p2form)).expr;
+    p1form.expr /= p1form.expr.lpNorm<Eigen::Infinity>()*.2;
+    emit formLoaded(makeFormPackage("projected velocity", p1form));
+
+}
 
 
+#ifdef FAKENESS
 
 #define CHECK_INTERIORS
 
@@ -135,7 +169,7 @@ void MainWindow::randomData() {
     }
     */
 
-        /*
+    /*
     form2.expr = dhdh*form2.expr;
     std::cout << form2.expr.norm() << std::endl;
     form2.expr.normalize();
@@ -217,7 +251,7 @@ void MainWindow::openFile() {
 #include <QApplication>
 int main(int argc, char * argv[]) {
     QApplication a(argc,argv);
-    ExampleWidget * mw = new ExampleWidget(); 
+    ExampleWidget * mw = new ExampleWidget();
     QStringList args = a.arguments();
     if(args.size() > 1) {
         mw->openFile(args[1]);

@@ -9,5 +9,7 @@
         <file>shader.130.v.glsl</file>
         <file>shader.130.f.glsl</file>
         <file>noneshader.130.v.glsl</file>
+        <file>particle.v.glsl</file>
+        <file>particle.f.glsl</file>
     </qresource>
 </RCC>

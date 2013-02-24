@@ -48,30 +48,39 @@ void GLWidget::initializeGL() {
     m_faceshader.reset(new ShaderProgram());
     m_vertshader.reset(new ShaderProgram());
     m_edgeshader.reset(new ShaderProgram());
-    initShader(*m_shader, "");
-    initShader(*m_faceshader, "face");
-    initShader(*m_vertshader, "vert");
-    initShader(*m_edgeshader, "edge");
+    m_particleshader.reset(new ShaderProgram());
+    initFormShader(*m_shader, "");
+    initFormShader(*m_faceshader, "face");
+    initFormShader(*m_vertshader, "vert");
+    initFormShader(*m_edgeshader, "edge");
+    initShader(*m_particleshader, "particle.v.glsl", "particle.f.glsl");
 
     glEnable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
     glEnable(GL_MULTISAMPLE);
     //glLineWidth(2.0);
 }
-void GLWidget::initShader(ShaderProgram & program, const QString & geotype)
-{
+void GLWidget::initFormShader(ShaderProgram & program, const QString & geotype) {
     qWarning() << "Creating shader for [" << geotype << "]";
-    QString vertexShaderPath(":/shaders/shader.v.glsl");
-    QString fragmentShaderPath(":/shaders/shader.f.glsl");
-    QString geometryShaderPath(tr(":/shaders/") + geotype + tr("shader.g.glsl"));
+    QString vertex("shader.v.glsl");
+    QString fragment("shader.f.glsl");
+    QString geometry(geotype+tr("shader.g.glsl"));
     if(this->format().majorVersion() < 3 || (geotype != tr("") && geotype != tr("face"))) {
-        vertexShaderPath = tr(":/shaders/shader.130.v.glsl");
+        vertex = tr("shader.130.v.glsl");
         if(geotype == tr("")) {
-            vertexShaderPath = tr(":/shaders/noneshader.130.v.glsl");
+            vertex = tr("noneshader.130.v.glsl");
         }
-        fragmentShaderPath = tr(":/shaders/shader.130.f.glsl");
-        geometryShaderPath = tr("");//hopefully "" file won't exist
+        fragment = tr("shader.130.f.glsl");
+        geometry = tr("");//hopefully "" file won't exist
     }
+    initShader(program,vertex,fragment,geometry);
+}
+void GLWidget::initShader(ShaderProgram & program, const QString & v, const QString &f, const QString &g) {
+
+    QString prefix(":/shaders/");
+    QString vertexShaderPath(prefix+v);
+    QString fragmentShaderPath(prefix+f);
+    QString geometryShaderPath(prefix+g);
     GLuint programId = program.programId;
     // First we load and compile the vertex shader...
     GLuint vertexId = compileShader(GL_VERTEX_SHADER, vertexShaderPath);
@@ -91,6 +100,7 @@ void GLWidget::initShader(ShaderProgram & program, const QString & geotype)
         return;
     }
 
+    if(g!=tr("")) {
     QFileInfo geoFileInfo(geometryShaderPath);
     GLuint geometryId = 0;
     if(geoFileInfo.exists())
@@ -98,6 +108,7 @@ void GLWidget::initShader(ShaderProgram & program, const QString & geotype)
         geometryId = compileShader(GL_GEOMETRY_SHADER, geometryShaderPath );
         if(geometryId)
             glAttachShader(programId, geometryId);
+    }
     }
     glLinkProgram(programId);
     GLint link_ok = GL_FALSE;
@@ -169,17 +180,17 @@ std::shared_ptr<VertexIndexObject> makevio(const std::vector<unsigned int> & ind
 std::shared_ptr<VertexBufferObject> makevbo(const std::vector<Eigen::Vector3f> & data) {
     const static int vecsize = sizeof(Eigen::Vector3f)/sizeof(float);
     return
-    std::make_shared<VertexBufferObject>(
+            std::make_shared<VertexBufferObject>(
                 (void*)data.data()
-                , vecsize * data.size()
-                , GL_STATIC_DRAW);
+                , data.size()
+                , GL_STATIC_DRAW, vecsize);
 }
 };
 
 void GLWidget::receiveMesh(std::shared_ptr<const MeshPackage> package) {
     m_meshpackage = package;
     m_formpackages.clear();
-    //m_active_forms.clear();
+    m_active_forms.clear();
 
     typedef Eigen::Vector3f Vector;
 
@@ -206,7 +217,9 @@ void GLWidget::receiveMesh(std::shared_ptr<const MeshPackage> package) {
 
 }
 
-
+void GLWidget::receiveParticles(std::shared_ptr<VertexBufferObject> vbo) {
+    m_particlevbo = vbo;
+}
 
 
 void GLWidget::receiveForm(const FormPackage &package) {
@@ -243,25 +256,47 @@ void GLWidget::paintGL() {
         render(RT_NONE);
     }
     */
-    bool renderedSomething=true;
+    bool renderedSomething=false;
+    bool renderedFace = false;
     for(auto&& str: m_active_forms) {
         if(m_formpackages.find(str) != m_formpackages.end()) {
-            renderForm(m_formpackages[str]);
+            auto&& result = m_formpackages[str];
+            renderForm(
+                        result
+                        );
             renderedSomething = true;
+            renderedFace |= (RT_FACE & result.type);
         }
     }
-    if(!renderedSomething) {
+
+    /*
+    if(!renderedFace) {
+        if(renderedSomething) {
+            glUniform1f(glGetUniformLocation(m_shader->programId, "normal_offset"), 0.0001f);
+        } else {
+            glUniform1f(glGetUniformLocation(m_shader->programId, "normal_offset"), 0.000f);
+        }
         m_shader->bind(false);
         glUniformMatrix4fv(glGetUniformLocation(m_shader->programId, "MV"),
-                1, GL_FALSE, glm::value_ptr(mat_mv));
+                           1, GL_FALSE, glm::value_ptr(mat_mv));
         glUniformMatrix4fv(glGetUniformLocation(m_shader->programId, "MVP"),
-                1, GL_FALSE, glm::value_ptr(mat_mvp));
+                           1, GL_FALSE, glm::value_ptr(mat_mvp));
+        glUniformMatrix4fv(glGetUniformLocation(m_shader->programId, "P"),
+                           1, GL_FALSE, glm::value_ptr(mat_p));
         const GLint vertexAttribId = m_shader->getAttribLocation("vertex");
         m_meshbuffers.vertices->bind(vertexAttribId);
         m_meshbuffers.indices->render();
         m_shader->release();
+    }*/
+    if(m_particlevbo) {
+        m_particleshader->bind(false);
+        glUniformMatrix4fv(glGetUniformLocation(m_particleshader->programId, "MVP"),
+                           1, GL_FALSE, glm::value_ptr(mat_mvp));
+        const GLint vertexAttribId = m_shader->getAttribLocation("vertex");
+        m_particlevbo->bind(vertexAttribId);
+        glDrawArrays(GL_POINTS, 0, m_particlevbo->size);
+        m_particleshader->release();
     }
-
 }
 
 std::unique_ptr<ShaderProgram> & GLWidget::shaderSelector(RenderType type) {
@@ -296,36 +331,36 @@ void GLWidget::renderForm(const FormPackage & form) {
     switch(static_cast<char>(type))
     {
     case RT_NONE | RT_DUAL:
-            m_meshbuffers.dual_vertices->bind(vertexAttribId);
-            m_meshbuffers.dual_indices->render();
-            break;
+        m_meshbuffers.dual_vertices->bind(vertexAttribId);
+        m_meshbuffers.dual_indices->render();
+        break;
     case RT_NONE:
-            m_meshbuffers.vertices->bind(vertexAttribId);
-            m_meshbuffers.indices->render();
-            break;
+        m_meshbuffers.vertices->bind(vertexAttribId);
+        m_meshbuffers.indices->render();
+        break;
     case RT_FACE | RT_DUAL:
-            m_meshbuffers.dual_facevertices->bind(vertexAttribId);
-            m_meshbuffers.dual_faceindices->render();
-            break;
+        m_meshbuffers.dual_facevertices->bind(vertexAttribId);
+        m_meshbuffers.dual_faceindices->render();
+        break;
     case RT_FACE:
-            m_meshbuffers.facevertices->bind(vertexAttribId);
-            m_meshbuffers.faceindices->render();
-            break;
+        m_meshbuffers.facevertices->bind(vertexAttribId);
+        m_meshbuffers.faceindices->render();
+        break;
     case RT_EDGE | RT_DUAL:
-            m_meshbuffers.dual_edgevertices->bind(vertexAttribId);
-            m_meshbuffers.dual_edgeindices->render();
-            break;
+        m_meshbuffers.dual_edgevertices->bind(vertexAttribId);
+        m_meshbuffers.dual_edgeindices->render();
+        break;
     case RT_EDGE:
-            m_meshbuffers.edgevertices->bind(vertexAttribId);
-            m_meshbuffers.edgeindices->render();
-            break;
+        m_meshbuffers.edgevertices->bind(vertexAttribId);
+        m_meshbuffers.edgeindices->render();
+        break;
     case RT_VERT | RT_DUAL:
-            m_meshbuffers.dual_vertices->bind(vertexAttribId);
-            glDrawArrays(GL_POINTS, 0, m_meshbuffers.num_dual_verts);//m_meshpackage->dual_vertices.size());
-            break;
+        m_meshbuffers.dual_vertices->bind(vertexAttribId);
+        glDrawArrays(GL_POINTS, 0, m_meshbuffers.num_dual_verts);//m_meshpackage->dual_vertices.size());
+        break;
     case RT_VERT:
-            m_meshbuffers.vertices->bind(vertexAttribId);
-            glDrawArrays(GL_POINTS, 0, m_meshpackage->vertices.size());
+        m_meshbuffers.vertices->bind(vertexAttribId);
+        glDrawArrays(GL_POINTS, 0, m_meshbuffers.vertices->size);
         break;
     }
     shader->release();

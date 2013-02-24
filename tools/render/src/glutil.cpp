@@ -105,7 +105,7 @@ VertexBufferObject::VertexBufferObject(GLvoid *data, GLsizei size, GLenum usage,
 {
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER,GLenum2size(type)*size,data, usage);
+    glBufferData(GL_ARRAY_BUFFER,GLenum2size(type)*size*tupleSize,data, usage);
 }
 
 void VertexBufferObject::bind(GLint attributeId)

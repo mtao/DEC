@@ -12,8 +12,6 @@
 #include <QDockWidget>
 #include <iostream>
 #include <random>
-#include <Eigen/SparseCholesky>
-#include <Eigen/IterativeLinearSolvers>
 
 MainWindow::MainWindow(QWidget * parent, FormBar * bar): QMainWindow(parent), m_formbar(bar) {
     setMenuBar(new QMenuBar(this));
@@ -62,6 +60,8 @@ MainWindow::MainWindow(QWidget * parent, FormBar * bar): QMainWindow(parent), m_
     addDockWidget(Qt::LeftDockWidgetArea, dock);
     connect(this,SIGNAL(formLoaded(const FormPackage &))
             , m_formbar,SLOT(receiveForm(const FormPackage &)));
+    connect(this,SIGNAL(particlesLoaded(std::shared_ptr<VertexBufferObject>))
+            , m_glwidget,SLOT(receiveParticles(std::shared_ptr<VertexBufferObject>)));
     connect(
             m_formbar, SIGNAL(enableForm(const QString &)),
             m_glwidget, SLOT(enableForm(const QString &)));
@@ -134,10 +134,6 @@ void MainWindow::openFile(const QString & filename) {
 
 
 
-    /*
-    auto& dual_edgeindices = package->dual_edgeindices;
-    auto& dual_edgeverts = package->dual_edgevertices;
-    */
     auto& dual_vertices = package->dual_vertices;
     auto& dual_indices = package->dual_indices;
     auto& dual_edgeindices = package->dual_edgeindices;
@@ -160,10 +156,6 @@ void MainWindow::openFile(const QString & filename) {
     typedef typename decltype(m_dec)::element_type::SparseMatrixColMajor SparseMatrix;
     const SparseMatrix & d0 = m_dec->template d<0>().expr;
     const SparseMatrix & d1 = m_dec->template d<1>().expr;
-    /*
-    const SparseMatrix & b2 = m_mesh->template b<2>();
-    const SparseMatrix & b1 = m_mesh->template b<1>();
-    */
 
 
 
@@ -184,13 +176,13 @@ void MainWindow::openFile(const QString & filename) {
     }
 
     for(int i=0; i < m_mesh->template simplices<0>().size(); ++i) {
-        auto&& s0 = m_mesh->template simplexByIndex<0>(i);
+        auto&& s0 = m_mesh->template simplex<0>(i);
 
         for(SparseMatrix::InnerIterator it1(d0, s0.Index()); it1; ++it1) {
-            auto&& s1 = m_mesh->template simplexByIndex<1>(it1.row());
+            auto&& s1 = m_mesh->template simplex<1>(it1.row());
 
             for(SparseMatrix::InnerIterator it2(d1, s1.Index()); it2; ++it2) {
-                auto&& s2 = m_mesh->template simplexByIndex<2>(it2.row());
+                auto&& s2 = m_mesh->template simplex<2>(it2.row());
                 dual_indices.push_back(s0.Index()+offset0);
                 dual_indices.push_back(s1.Index()+offset1);
                 dual_indices.push_back(s2.Index()+offset2);
@@ -201,13 +193,13 @@ void MainWindow::openFile(const QString & filename) {
 
 
     for(int i=0; i < m_mesh->template simplices<1>().size(); ++i) {
-        auto&& s = m_mesh->template simplexByIndex<1>(i);
+        auto&& s = m_mesh->template simplex<1>(i);
         SparseMatrix::InnerIterator it(d1, s.Index());
-        auto&& s1 = m_mesh->template simplexByIndex<2>(it.row());
+        auto&& s1 = m_mesh->template simplex<2>(it.row());
         dual_edgeindices[2*i] = 2*i;
         dual_edgeverts[2*i] = s1.Center();
         ++it;
-        auto&& s2 = m_mesh->template simplexByIndex<2>(it.row());
+        auto&& s2 = m_mesh->template simplex<2>(it.row());
         dual_edgeindices[2*i+1] = 2*i+1;
         dual_edgeverts[2*i+1] = s2.Center();
 
@@ -229,16 +221,14 @@ void MainWindow::openFile(const QString & filename) {
 
     int count=0;
     for(int i=0; i < m_mesh->template simplices<0>().size(); ++i) {
-        auto&& s0 = m_mesh->template simplexByIndex<0>(i);
+        auto&& s0 = m_mesh->template simplex<0>(i);
 
         for(SparseMatrix::InnerIterator it1(d0, s0.Index()); it1; ++it1) {
-            auto&& s1 = m_mesh->template simplexByIndex<1>(it1.row());
+            auto&& s1 = m_mesh->template simplex<1>(it1.row());
 
-            //for(SparseMatrix::InnerIterator it2(d1, s1.Index()); it2; ++it2) {
-            //auto&& s2 = m_mesh->template simplexByIndex<2>(it2.row());
             SparseMatrix::InnerIterator it2(d1, s1.Index());
 
-            auto&& s2 = m_mesh->template simplexByIndex<2>(it2.row());
+            auto&& s2 = m_mesh->template simplex<2>(it2.row());
             dual_faceverts.push_back(s0.Center());
             if((s0[0] == s1[0]) ^ s1.isSameSign(s2)) {
             dual_faceverts.push_back(s2.Center());
@@ -250,7 +240,7 @@ void MainWindow::openFile(const QString & filename) {
             ++count;
             ++it2;
 
-            auto&& s2b = m_mesh->template simplexByIndex<2>(it2.row());
+            auto&& s2b = m_mesh->template simplex<2>(it2.row());
             dual_faceverts.push_back(s0.Center());
             if((s0[0] == s1[0]) ^ s1.isSameSign(s2)) {
             dual_faceverts.push_back(s1.Center());
@@ -260,7 +250,6 @@ void MainWindow::openFile(const QString & filename) {
             dual_faceverts.push_back(s1.Center());
             }
             ++count;
-            //}
         }
         m_dual_vertex_form_indices.push_back(count);
     }

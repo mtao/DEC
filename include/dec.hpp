@@ -50,6 +50,7 @@ private:
     typedef Form<Dim,DynamicVector,Type1,N1> MyType;
 public:
     typedef form_traits<Dim,Type1,-1,Type1,N1,true> Traits;
+    typedef typename DynamicVector::Scalar Scalar;
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     typedef FormExpression<Traits,DynamicVector> Parent;
     using Parent::expr;
@@ -77,6 +78,8 @@ public:
         }
         return ret;
     }
+    Scalar & operator()(int i){return expr(i);}
+    const Scalar & operator()(int i) const {return expr(i);}
 
 private:
     //DynamicVector expr;
@@ -122,6 +125,10 @@ protected:
 
 public:
     template <FormType Type, int N>
+    struct FormTraits {
+    typedef Form<Complex::Dim, typename Complex::NumTraits::DynamicVector,Type,N> type;
+    };
+    template <FormType Type = PRIMAL_FORM, int N = Complex::Dim>
     Form<Complex::Dim, typename Complex::NumTraits::DynamicVector,Type,N> genForm()
     {
         static_assert(N <= Complex::Dim,"Form can't be of higher dim than top dim of simplicial complex");
@@ -163,12 +170,12 @@ protected:
               sc.template numSimplices<D>()
               //SparseMatrixColMajor(sc.template numSimplices<D>(),
               //sc.template numSimplices<D>())
-                         )
+              )
         , m_hodge_dual(
               sc.template numSimplices<D>()
               //SparseMatrixColMajor(sc.template numSimplices<D>(),
               //sc.template numSimplices<D>())
-                       )
+              )
     {
         for(auto&& s: sc.template constSimplices<D>())
         {
@@ -260,17 +267,17 @@ class HiddenOperatorContainer<Complex_,0>{
     typedef typename NumTraits::SparseMatrixColMajor SparseMatrixColMajor;
 protected:
     HiddenOperatorContainer(const Complex_ & sc)
-        // : m_d_dual(sc.template b<Complex_::Dim>())
+    // : m_d_dual(sc.template b<Complex_::Dim>())
         : m_hodge_primal(
               sc.template numSimplices<Complex_::Dim>()
               //SparseMatrixColMajor(sc.template numSimplices<Complex_::Dim>(),
               //sc.template numSimplices<Complex_::Dim>())
-                         )
+              )
         , m_hodge_dual(
               sc.template numSimplices<Complex_::Dim>()
               //SparseMatrixColMajor(sc.template numSimplices<Complex_::Dim>(),
               //sc.template numSimplices<Complex_::Dim>())
-                       )
+              )
     {
         for(auto&& s: sc.template constSimplices<Complex_::Dim>())
         {
@@ -285,10 +292,6 @@ protected:
 protected:
 
 protected:
-    //bool m_d_primal=false;
-    //FormOperator<form_traits<Complex_::Dim,DUAL_FORM,0,DUAL_FORM,1>,const SparseMatrixColMajor> m_d_dual;
-    //FormOperator<form_traits<Complex_::Dim,PRIMAL_FORM,Complex_::Dim,DUAL_FORM,0>, SparseMatrixColMajor> m_hodge_primal;//primal D -> dual TmD
-    //FormOperator<form_traits<Complex_::Dim,DUAL_FORM,0,PRIMAL_FORM,Complex_::Dim>, SparseMatrixColMajor> m_hodge_dual;//dual TmD -> primal D
     FormOperator<form_traits<Complex_::Dim,PRIMAL_FORM,Complex_::Dim,DUAL_FORM,0>, DiagonalMatrix> m_hodge_primal;//primal D -> dual TmD
     FormOperator<form_traits<Complex_::Dim,DUAL_FORM,0,PRIMAL_FORM,Complex_::Dim>, DiagonalMatrix> m_hodge_dual;//dual TmD -> primal D
 private:
@@ -301,25 +304,8 @@ private:
     -> const decltype(m_hodge_dual) &
     {
         return m_hodge_dual;
-    }/*
-    auto internal_d(primal_tag) const//this will always fail if you do anything with the returned operator... should change it to an assert later though
-    -> const decltype(m_d_primal) &
-    {
-        return m_d_primal;
     }
-    auto  internal_d(dual_tag) const
-    -> const decltype(m_d_dual) &
-    {
-        return m_d_dual;
-    }*/
 protected:
-    /*
-    template <FormType Type>
-    auto internal_d() const
-    -> const typename std::conditional<Type==PRIMAL_FORM, decltype(m_d_primal), decltype(m_d_dual) >::type &
-    {
-        return internal_d(typename std::conditional<Type==PRIMAL_FORM, primal_tag, dual_tag>::type());
-    }*/
     template <FormType Type>
     auto internal_h() const
     -> const typename std::conditional<Type==PRIMAL_FORM, decltype(m_hodge_primal), decltype(m_hodge_dual) >::type &
@@ -343,6 +329,7 @@ template <typename Complex_, bool Interior = false>
 class DEC: public FormFactory<Complex_>, public OperatorContainer<Complex_>
 {
 public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     typedef Complex_ Complex;
     typedef typename Complex_::NumTraits NumTraits;
     typedef typename NumTraits::SparseMatrixColMajor SparseMatrixColMajor;
@@ -388,89 +375,61 @@ public:
                 h<Traits::NOut, Traits::TypeOut>() * rhs;
     }
 
-    /*
-           template <typename Traits, typename Expr>
-           auto h(const FormExpression<Traits, Expr> & rhs)
-           -> decltype (d<Traits::NOut, Traits::TypeOut>() * rhs)
-           {
-           return
-           h<Traits::NOut, Traits::TypeOut>() * rhs;
-           }
-           */
+    const Complex & complex() const {return m_sc;}
+    //====================================================
+    //====================================================
+    //==            Interpolation                       ==
+    //====================================================
+    //====================================================
 
-    /*
-           template <FormType Type, int N>
-           const Form<Complex_,Type,N+1> d(const Form<Complex_,Type,N> & f)const
-           {
-           return Form<Complex_,Type,N+1>(d<N>()*f);
-           }
-           template <FormType Type, int N, typename Expression>
-           auto d(const FormObject & f) const
-           -> FormExpression<Type,N+1,decltype(d<N>()*f)>
-           {
-           typedef FormExpression<
-           DUAL_FORM, N+1,
-           decltype(d<N>()*f)
-           > ResultExprType;
-        //should map PRIMAL,N to DUAL,Dim-N
-        //or it maps DUAL, N to PRIMAL,Dim-N
-        return ResultExprType(d<N>() * f);
-        }
-        */
-    /*
-           template <int N, typename Mat>
-           auto h(const Mat & m) const -> decltype(h<N>() * m)
-           {
-           return h<N>() * m;
-           }
-           */
-    /*
-           template <int N, typename Expression>
-           auto h(const FormExpression<PRIMAL_FORM,N,Expression> & f) const
-           -> FormExpression<DUAL_FORM,Dim-N,decltype(h<N>()*f)>
-           {
-           typedef FormExpression<
-           DUAL_FORM, Dim-N,
-           decltype(h<N>()*f)
-           > ResultExprType;
-        //should map PRIMAL,N to DUAL,Dim-N
-        //or it maps DUAL, N to PRIMAL,Dim-N
-        return ResultExprType(h<N>() * f);
-        }
-        template <int N, typename Expression>
-        auto h(const FormExpression<DUAL_FORM,N,Expression> & f) const
-        -> FormExpression<PRIMAL_FORM,Dim-N,decltype(((N*(Dim-N)%2==0)?1:-1)*h<N>().inverse() * f)>
-        {
-        typedef FormExpression<
-        PRIMAL_FORM,Dim-N,
-        decltype(
-        ((N*(Dim-N)%2==0)?1:-1)*h<N>().inverse() * f
-        )
-        > ResultExprType;
 
-        //should map PRIMAL,N to DUAL,Dim-N
-        //or it maps DUAL, N to PRIMAL,Dim-N
-        return ResultExprType(((N*(Dim-N)%2==0)?1:-1)*h<N>().inverse() * f);
+    typedef typename FormFactory<Complex>::template FormTraits<PRIMAL_FORM,Dim-1>::type Nm1Form;
+    typedef typename Complex::template TraitsContainer<Dim>::complextype::WhitneyBasis VelocityBasis;
+    typedef typename Complex::template TraitsContainer<Dim>::complextype::WhitneyCoefficients VelocityCoefficients;
+    typedef typename Complex::Vector Vector;
+    void getVelocityInPlace(const Vector & p, const typename Complex::template TraitsContainer<Dim>::simplextype & simplex, const Nm1Form & form, Vector & v) {
+        VelocityCoefficients coeffs;
+        auto&& b = m_sc.template b<Dim>();
+        auto&& basis = m_sc.whitneyBasis(simplex);
+        int i=0;
+        for(typename decltype(b)::InnerIterator it(b,simplex.Index()); it; ++it, ++i) {
+            auto&& lower = m_sc.simplex(it.row());
+            coeffs(i) = (simplex.isSameSign(lower)?1:-1) * form(simplex[i])
+                    * basis.col(i).dot(p-lower.Center());
         }
-        */
-    /*
-           template <int N>
-           const Form<Complex_,DUAL_FORM,Dim-N> h(const Form<Complex_,PRIMAL_FORM,N> & f)const
-           {
-           return h<N>() * f;
-           }
+        v = m_sc.whitneyBasis(simplex) * coeffs;
+    }
+    Vector getVelocityInPlace(const Vector & p, const typename Complex::template TraitsContainer<Dim>::simplextype & simplex, const Nm1Form & form) {
+        Vector v;
+        getVelocityInPlace(p,simplex,form,v);
+        return v;
 
-           template <int N>
-           const Form<Complex_,PRIMAL_FORM,N> h(const Form<Complex_,DUAL_FORM,Dim-N> & f)const
-           {
-        //enforce inverse hodge keeeps  *^{-1}* = -1^{k*n-k}
-        return ((N*(Dim-N)%2==0)?1:-1)*h<N>().inverse() * f;
+}
+/*
+    affineInPlace(const NSimplex & s, const Vector & v, std::array<T, N+1> & res) {
+        std::array<Scalar, N+1> coords = barycentricCoords(s,v);
+        T ret;
+        ret = ret * 0;//TODO: find a better way to zero things out...
+        for(int i=0; i < N+1; ++i) {
+            res +=
         }
-        */
+
+
+
+
+    }
+    template <typename T>
+    T affine(const NSimplex & s, const Vector & v) {
+        T t;
+        affineInPlace(s,v,t);
+        return t;
+    }
+    */
+
 
 
 private:
-    const Complex & m_sc;
+const Complex & m_sc;
 };
 #include "dec_overloads.hpp"
 #endif

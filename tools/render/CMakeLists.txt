@@ -35,6 +35,8 @@ SET(LIBDECRENDER_SHADERS
     shaders/faceshader.g.glsl
     shaders/edgeshader.g.glsl
     shaders/vertshader.g.glsl
+    shaders/particle.f.glsl
+    shaders/particle.v.glsl
     )
 #This target has an obvious purpose :)
 ADD_CUSTOM_TARGET(MAKE_SHADERS_VISIBLE_IN_QTCREATOR

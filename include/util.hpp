@@ -3,52 +3,42 @@
 #include "dec.hpp"
 #include <vector>
 #include <limits>
-#include <Eigen/Geometry>
+#include "geometry.hpp"
 namespace mtao{
 
-template <typename Vector>
-void getBoundingBoxInPlace(const std::vector<Vector> & vertices, Eigen::AlignedBox<typename Vector::Scalar,Vector::RowsAtCompileTime> & bbox)  {
-    typedef typename Vector::Scalar Scalar;
-    auto&& min = bbox.min();
-    auto&& max = bbox.max();
-    min = Vector::Constant(std::numeric_limits<Scalar>::infinity());
-    max = Vector::Constant(-std::numeric_limits<Scalar>::infinity());
-    for(auto&& vert: vertices) {
-        min = min.cwiseMin(vert);
-        max = max.cwiseMax(vert);
+
+
+template <typename Complex>
+void normalInPlace(const Complex & sc, typename Complex::Vector & n, const typename Complex::template TraitsContainer<Complex::Dim>::simplextype & simplex) {
+    if(Complex::EmbeddedDim == 3 && decltype(simplex)::Dim == 2) {
+        n = (simplex.isNegative()?1:-1)*(sc.vertex(simplex[2]) - sc.vertex(simplex[0])).cross(sc.vertex(simplex[2]) - sc.vertex(simplex[0])).normalize();
     }
 }
+template <typename Complex>
+void projectToSimplexInPlace(const Complex & sc, typename Complex::Vector & vec, const typename Complex::template TraitsContainer<Complex::Dim>::simplextype & simplex) {
 
-template <typename Vector>
-Eigen::AlignedBox<typename Vector::Scalar,Vector::RowsAtCompileTime> getBoundingBox(const std::vector<Vector> & vertices) {
-    Eigen::AlignedBox<typename Vector::Scalar,Vector::RowsAtCompileTime> bbox;
-    getBoundingBoxInPlace(vertices,bbox);
-    return bbox;
-}
-
-template <typename Vector>
-void normalizeToBBoxInPlace(std::vector<Vector> & vertices, const Eigen::AlignedBox<typename Vector::Scalar, Vector::RowsAtCompileTime> & bbox) {
-    typedef typename Vector::Scalar Scalar;
-    Vector mid = bbox.center();
-    Scalar range = (bbox.max()-bbox.min()).maxCoeff();
-    for(auto&& v: vertices) {
-        v.noalias() = (v-mid)/range;
+    typedef typename Complex::Vector Vector;
+    auto&& origin = sc.vertex(simplex[Complex::Dim]);
+    Vector ortho = vec - origin;
+    Eigen::Matrix<typename Vector::Scalar, Vector::RowsAtCompileTime, Complex::Dim> m;
+    for(int i=0; i < Complex::Dim; ++i) {
+        m.col(i) = sc.vertex(simplex[i]) - origin;
     }
-}
+    Vector n = normal(m);
+    ortho = ortho.dot(n) * n;
+    //ortho.normalize();
 
-template <typename Vector>
-void normalizeInPlace(std::vector<Vector> & vertices) {
-    auto bbox = getBoundingBox(vertices);
-    normalizeToBBoxInPlace(vertices,bbox);
-}
+    vec -= ortho;//.dot(vec) * ortho;
 
-template <typename Vector>
-std::vector<Vector> normalize(const std::vector<Vector> & vertices) {
-    std::vector<Vector> ret = vertices;
-    normalizeInPlace(ret);
-    return ret;
 }
+template <typename Complex>
+typename Complex::Vector projectToSimplex(const Complex & sc, const typename Complex::Vector & vec, const typename Complex::template TraitsContainer<Complex::Dim>::simplextype & simplex) {
+    typename Complex::Vector v = vec;
+    projectToSimplexInPlace(sc,v,simplex);
+    return v;
 
+
+}
 
 
 };

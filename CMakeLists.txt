@@ -36,7 +36,7 @@ INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/include $ENV{DEC_PATH})
 
 ADD_DEFINITIONS(-std=c++11)
 ADD_DEFINITIONS(-Wall)
-#ADD_DEFINITIONS(-Werror)
+ADD_DEFINITIONS(-Werror)
 
 SET(DEC_HEADERS
     include/simplex.hpp
@@ -47,7 +47,9 @@ SET(DEC_HEADERS
     include/dec.hpp
     include/dec_overloads.hpp
     include/util.hpp
+    include/geometry.hpp
     include/render.hpp
+    include/advection.hpp
     #include/kdtree.hpp
     )
 

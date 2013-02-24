@@ -28,7 +28,8 @@ protected:
     virtual void wheelEvent(QWheelEvent * wheelEvent);
     virtual void keyPressEvent(QKeyEvent *event);
 private:
-    void initShader(ShaderProgram & program, const QString & geotype);
+    void initShader(ShaderProgram & program, const QString & v, const QString & f, const QString & g="");
+    void initFormShader(ShaderProgram & program, const QString & geotype);
     GLuint compileShader(GLenum shaderType, const QString & fileName);
     std::unique_ptr<ShaderProgram> & shaderSelector(RenderType type);
     //void render(RenderType type);
@@ -42,8 +43,10 @@ private:
     std::unique_ptr<ShaderProgram> m_vertshader;
     std::unique_ptr<ShaderProgram> m_faceshader;
     std::unique_ptr<ShaderProgram> m_edgeshader;
+    std::unique_ptr<ShaderProgram> m_particleshader;
     MeshBuffers m_meshbuffers;
     std::shared_ptr<const MeshPackage> m_meshpackage;
+    std::shared_ptr<VertexBufferObject> m_particlevbo;
     std::map<QString, FormPackage> m_formpackages;
     std::set<QString> m_active_forms;
 
@@ -59,6 +62,7 @@ public slots:
     void disableRendering(){m_doRender =false;}
     void enableRendering(){m_doRender = true;}
     void receiveMesh(std::shared_ptr<const MeshPackage> package);
+    void receiveParticles(std::shared_ptr<VertexBufferObject> vbo);
     void receiveForm(const FormPackage & package);
     void enableForm(const QString & formname);
     void disableForm(const QString & name);
