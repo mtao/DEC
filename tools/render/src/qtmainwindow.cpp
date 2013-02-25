@@ -103,8 +103,8 @@ void MainWindow::openFile(const QString & filename) {
     auto& edgeverts = package->edgevertices;
 
     //    mtao::normalizeInPlace(verts);//Normalize!!
-    auto bbox = mtao::getBoundingBox(verts);
-    mtao::normalizeToBBoxInPlace(verts,bbox);
+    m_bbox = mtao::getBoundingBox(verts);
+    mtao::normalizeToBBoxInPlace(verts,m_bbox);
 
     std::transform(packed_indices.cbegin(), packed_indices.cend(), faceverts.begin(),
                    [&verts](const unsigned int ind)->typename std::remove_reference<decltype(faceverts)>::type::value_type
@@ -265,9 +265,9 @@ void MainWindow::openFile(const QString & filename) {
 
 
 
-    mtao::normalizeToBBoxInPlace(dual_faceverts,bbox);
-    mtao::normalizeToBBoxInPlace(dual_edgeverts,bbox);
-    mtao::normalizeToBBoxInPlace(dual_vertices,bbox);
+    mtao::normalizeToBBoxInPlace(dual_faceverts,m_bbox);
+    mtao::normalizeToBBoxInPlace(dual_edgeverts,m_bbox);
+    mtao::normalizeToBBoxInPlace(dual_vertices,m_bbox);
 
 
 

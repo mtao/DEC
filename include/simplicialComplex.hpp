@@ -312,7 +312,7 @@ public:
     //====================================================
     //====================================================
 
-    Eigen::Matrix<Scalar, EmbeddedDim, Dim+1> verticesBySimplex(const NSimplex & s);
+    Eigen::Matrix<Scalar, EmbeddedDim, Dim+1> verticesBySimplex(const NSimplex & s) const;
 
     //====================================================
     //====================================================
@@ -622,12 +622,13 @@ template <typename NT,typename DT> auto SimplicialComplexPrivate<NT,DT>
     //====================================================
 
 template <typename NT,typename DT> auto SimplicialComplexPrivate<NT,DT>
-::verticesBySimplex(const NSimplex & s)
+::verticesBySimplex(const NSimplex & s) const
     -> Eigen::Matrix<Scalar, EmbeddedDim, Dim+1> {
     Eigen::Matrix<Scalar, EmbeddedDim, Dim+1> m;
     for(int i=0; i <= Dim;++i) {
         m.col(i) = SC0::m_vertices[i];
     }
+    return m;
 }
 
 
@@ -805,9 +806,9 @@ public:
     Vector & vertex(unsigned int ind) { return TraitsContainer<0>::complextype::m_vertices[ind];}
     const Vector & vertex(unsigned int ind) const{ return TraitsContainer<0>::complextype::m_vertices[ind];}
     template <int M=Dim>
-    auto vertices(const typename TraitsContainer<M>::simplextype & s)
-    -> decltype(TraitsContainer<M>::verticesBySimplex(s)) {
-        return TraitsContainer<M>::verticesBySimplex(s);
+    auto vertices(const typename TraitsContainer<M>::simplextype & s) const
+    -> decltype(TraitsContainer<M>::complextype::verticesBySimplex(s)) {
+        return TraitsContainer<M>::complextype::verticesBySimplex(s);
     }
 
 

@@ -11,55 +11,54 @@ public:
     typedef typename Complex::DimTraits DimTraits;
     typedef typename Complex::Vector Vector;
     typedef typename Vector::Scalar Scalar;
+    typedef typename DEC::SparseMatrixColMajor SparseMatrix;
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     Particle(const DEC & dec, const Vector & p = Vector::Zero())//, const Vector & v = Vector::Zero())
-        : m_dec(dec)
+        : m_dec(&dec)
         , m_pos(p)
         //, m_vel(v)
     {
+    }
+        void project() {
         //TODO: findNearestSimplex(vel);
         Scalar error = std::numeric_limits<Scalar>::max();
-        auto&& sc = m_dec.complex();
+        auto&& sc = m_dec->complex();
         Vector offset = Vector::Zero();
-        Eigen::Vector2f barycentric = Eigen::Vector2f(0,0);
-//        std::cout << "Bary coords were: " << barycentric.transpose() << std::endl;
+
         for(auto&& simplex: sc.constSimplices()) {
-            auto m = m_dec.complex().vertices(simplex);
-            Eigen::Matrix<Scalar, Complex::EmbeddedDim, Complex::Dim-1> basis = m.rightCols(Complex::Dim-1);
-            Vector origin = m.col(0);
-            basis = basis - origin.rowwise().replicate(Complex::Dim-1);
-
-            Eigen::Vector2f coords = m_dec.complex().barycentricCoords(simplex, m_pos);
-            std::cout << coords.transpose() << std::endl;
-            //REINSERT_HERE
-            bool in_prism = true;
-            for(int i=0; i < coords.rows(); ++i) {
-                in_prism &= (coords(i) >= 0) && (coords(i) <= 1);
+            bool inside = true;
+            for(typename SparseMatrix::InnerIterator it(m_dec->complex().b(), simplex.Index()); it; ++it) {
+                auto&& s1 = m_dec->complex().template simplex<1>(it.row());
+                Vector normal = (simplex.Center() - s1.Center()).normalized();
+                if((m_pos- s1.Center()).dot(normal)<0) {
+                    inside = false;
+                    break;
+                }
             }
-            in_prism &= coords.sum() <= 1;
 
-            if (in_prism) {// && Complex::EmbeddedDim == Complex::Dim+1) {
-                Vector np = mtao::projectToSimplex(sc, p, simplex);
-                Scalar err = (p-np).squaredNorm();
+            if (inside) {
+                Vector np = mtao::projectToSimplex(sc, m_pos, simplex);
+                Scalar err = (m_pos-simplex.Center()).squaredNorm();
                 if(err < error) {
                     error = err;
                     m_simplex = &simplex;
                     offset = np;
-                    barycentric = coords;
 
                 }
             }
 
         }
-        std::cout << "Bary coords were: " << barycentric.transpose() << std::endl;
-        std::cout << "Chosen offset: " << offset.transpose() << std::endl;
+        std::cout << error << std::endl;
         m_pos.noalias() = offset;
-        std::cout << "New position: " << m_pos.transpose() << std::endl;
+        if(error > 0.01) {
+            m_pos = Vector::Random();
+            project();
+        }
     }
     Vector & p() {return m_pos;}
     const Vector & p() const {return m_pos;}
 private:
-    const DEC & m_dec;
+    const DEC * m_dec;
     Vector m_pos = Vector::Zero();
     //Vector m_vel = Vector::Zero();
     const Simplex * m_simplex = 0;
@@ -93,5 +92,5 @@ protected:
 
 
 /*
-            */
+                    */
 #endif

@@ -1,7 +1,7 @@
 #include "../../../include/io.hpp"
 #include "../../../include/util.hpp"
 #include "../../../include/render.hpp"
-//#include "../../../include/advection.hpp"
+#include "../../../include/advection.hpp"
 #include "../include/qtmainwindow.h"
 #include "../include/packages.h"
 #include <Eigen/SparseCholesky>
@@ -61,15 +61,25 @@ void ExampleWidget::openFile(const QString & filename) {
     std::cout << m << std::endl;
     std::cout << m.transpose() * m << std::endl;
     /*
-    Particle<DEC<TriangleMeshf, true> > p(*m_dec,Vector(1,1,1));
-    std::vector<Vector> ps;
-    ps.resize(20);
-    for(int i=1; i < ps.size(); ++i) {
-        ps[i] = p.p();
+    std::vector<Particle<DEC<TriangleMeshf,true> > > particles(100, Particle<DEC<TriangleMeshf,true> >(*m_dec, Vector::Random()));
+    for(auto&& p: particles) {
+        p.p() = Vector::Random();
+        mtao::unnormalizeToBBoxInPlace(p.p(), m_bbox);
+        std::cout << "====" << std::endl;
+        p.project();
+    }
+    */
+    std::vector<Particle<DEC<TriangleMeshf,true> > > particles(m_mesh->numSimplices(), Particle<DEC<TriangleMeshf,true> >(*m_dec, Vector::Random()));
+    std::transform(m_mesh->simplices().begin(), m_mesh->simplices().end(), particles.begin(), [&] (const decltype(m_mesh->simplices()[0]) & s)
+            -> Particle<DEC<TriangleMeshf,true> > {
+        return Particle<DEC<TriangleMeshf,true> >(*m_dec, s.Center());
+    });
+    std::vector<Vector> ps(particles.size());
+    for(int i=0; i < ps.size(); ++i) {
+        ps[i] = mtao::normalizeToBBox(particles[i].p(),m_bbox);
     }
     //emit particlesLoaded(std::make_shared<VertexBufferObject>(&p.p()(0),1,GL_STATIC_DRAW,3));
     emit particlesLoaded(std::make_shared<VertexBufferObject>((void*)ps.data(),ps.size(),GL_STATIC_DRAW,3));
-    */
 }
 
 void ExampleWidget::keyPressEvent(QKeyEvent * event) {

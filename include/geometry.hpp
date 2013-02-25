@@ -35,6 +35,47 @@ void normalizeToBBoxInPlace(std::vector<Vector> & vertices, const Eigen::Aligned
         v.noalias() = (v-mid)/range;
     }
 }
+template <typename Vector>
+void normalizeToBBoxInPlace(Vector & v, const Eigen::AlignedBox<typename Vector::Scalar, Vector::RowsAtCompileTime> & bbox) {
+    typedef typename Vector::Scalar Scalar;
+    Vector mid = bbox.center();
+    Scalar range = (bbox.max()-bbox.min()).maxCoeff();
+        v.noalias() = (v-mid)/range;
+}
+
+
+
+template <typename Vector>
+void unnormalizeToBBoxInPlace(Vector & v, const Eigen::AlignedBox<typename Vector::Scalar, Vector::RowsAtCompileTime> & bbox) {
+    typedef typename Vector::Scalar Scalar;
+    Vector mid = bbox.center();
+    Scalar range = (bbox.max()-bbox.min()).maxCoeff();
+        v.noalias() = (v+mid)*range;
+}
+
+
+
+
+
+
+
+
+template <typename Vector>
+const std::vector<Vector> normalizeToBBox(const std::vector<Vector> & vertices, const Eigen::AlignedBox<typename Vector::Scalar, Vector::RowsAtCompileTime> & bbox) {
+    std::vector<Vector> ret = vertices;
+    normalizeToBBoxInPlace(ret,bbox);
+    return ret;
+}
+template <typename Vector>
+Vector normalizeToBBox(const Vector & vertices, const Eigen::AlignedBox<typename Vector::Scalar, Vector::RowsAtCompileTime> & bbox) {
+    Vector ret = vertices;
+    normalizeToBBoxInPlace(ret,bbox);
+    return ret;
+}
+
+
+
+
 
 template <typename Vector>
 void normalizeInPlace(std::vector<Vector> & vertices) {
@@ -48,6 +89,25 @@ std::vector<Vector> normalize(const std::vector<Vector> & vertices) {
     normalizeInPlace(ret);
     return ret;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 template <typename Matrix>

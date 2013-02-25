@@ -23,6 +23,7 @@ protected:
     std::unique_ptr<TriangleMeshf> m_mesh;
     std::unique_ptr<DEC<TriangleMeshf,true> > m_dec;
     std::vector<unsigned int> m_dual_vertex_form_indices;
+    Eigen::AlignedBox<TriangleMeshf::Scalar, TriangleMeshf::EmbeddedDim> m_bbox;
     template <typename Form>
     auto makeFormPackage(const QString & name, const Form & form)
     ->
