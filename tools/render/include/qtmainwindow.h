@@ -27,9 +27,9 @@ protected:
     template <typename Form>
     auto makeFormPackage(const QString & name, const Form & form)
     ->
-        decltype(mtao::makeFormPackage(name, form, m_dual_vertex_form_indices))
+        decltype(mtao_internal::makeFormPackage(name, form, m_dual_vertex_form_indices))
     {
-        return mtao::makeFormPackage(name, form, m_dual_vertex_form_indices);
+        return mtao_internal::makeFormPackage(name, form, m_dual_vertex_form_indices);
     }
     FormBar * m_formbar = 0;
 signals:
@@ -38,6 +38,7 @@ signals:
     //void meshLoaded(const MeshPackage2 & package);
     void formLoaded(const FormPackage & package);
     void dataLoaded();
+    void loadingNewMesh();
 };
 
 #endif

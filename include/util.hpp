@@ -10,7 +10,7 @@ namespace mtao{
 
 template <typename Complex>
 void normalInPlace(const Complex & sc, typename Complex::Vector & n, const typename Complex::template TraitsContainer<Complex::Dim>::simplextype & simplex) {
-    if(Complex::EmbeddedDim == 3 && decltype(simplex)::Dim == 2) {
+    if(Complex::EmbeddedDim == 3 && (Complex::Dim == 2)) {
         n = (simplex.isNegative()?1:-1)*(sc.vertex(simplex[2]) - sc.vertex(simplex[0])).cross(sc.vertex(simplex[2]) - sc.vertex(simplex[0])).normalize();
     }
 }
@@ -42,5 +42,39 @@ typename Complex::Vector projectToSimplex(const Complex & sc, const typename Com
 
 
 };
+
+
+/* Triangle mesh with normals*/
+/*
+class TriangleMesh: public SimplicialComplex<NumericalTraits<float, 3>
+{
+    public:
+    typdef SimplicialComplex<NumericalTraits<float, 3> > SCParent;
+    protected:
+    TriangleMesh() {}
+    TriangleMesh(const std::vector<NSimplex > & simplices, const std::vector<Vector> & vertices)
+        : SCParent(simplices,vertices)
+    {
+        init();
+    }
+    TriangleMesh(const std::vector<mtao::IndexSet<N+1> > & tuples, const std::vector<Vector> & vertices)
+        : SCParent(tuples,vertices)
+    {
+        init();
+    }
+
+    TriangleMesh(const std::vector<unsigned int > & tuples, const std::vector<Vector> & vertices)
+        : SCParent(tuples,vertices)
+    {
+        init();
+    }
+    void init();
+
+};
+
+void TriangleMesh::init() {
+    computeNormals();
+}
+*/
 
 #endif

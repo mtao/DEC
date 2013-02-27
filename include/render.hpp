@@ -2,7 +2,7 @@
 #define DEC_RENDER_H
 #include "dec.hpp"
 #include <vector>
-namespace mtao{
+namespace mtao_internal{
 template <int M, typename SimplicialComplex>
 std::vector<unsigned int> simplicesToRenderable(const SimplicialComplex & sc)
 {

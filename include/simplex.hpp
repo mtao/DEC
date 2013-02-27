@@ -5,18 +5,19 @@
 
 
 
-
+namespace mtao_internal{
 template <typename NT, typename DT>
 class SimplicialComplexPrivate;
 template <typename NT, typename DT>
 class SimplicialComplexPrivateBase;
+};
 
 template <typename NT, typename DT>
 class Simplex
 {
 public:
-    friend class SimplicialComplexPrivate<NT,DT>;
-    friend class SimplicialComplexPrivateBase<NT,DT>;
+    friend class mtao_internal::SimplicialComplexPrivate<NT,DT>;
+    friend class mtao_internal::SimplicialComplexPrivateBase<NT,DT>;
     typedef NT NumTraits;
     static const int Dim = DT::Dim;
     typedef typename NumTraits::Vector Vector;

@@ -57,6 +57,11 @@ public:
     }
     Vector & p() {return m_pos;}
     const Vector & p() const {return m_pos;}
+    /*
+    void v() {
+        m_dec->simplex()->whitney
+    }
+    */
 private:
     const DEC * m_dec;
     Vector m_pos = Vector::Zero();

@@ -5,10 +5,10 @@
 #include "simplicialComplex.hpp"
 #include <fstream>
 template <typename Scalar>
-SimplicialComplex<NumericalTraits<Scalar,3>,2> * readOBJtoSimplicialComplex(std::istream & is)
+SimplicialComplex<mtao_internal::num_traits<Scalar,3>,2> * readOBJtoSimplicialComplex(std::istream & is)
 {
 
-    typedef SimplicialComplex<NumericalTraits<Scalar,3>, 2> TriangleMesh;
+    typedef SimplicialComplex<mtao_internal::num_traits<Scalar,3>, 2> TriangleMesh;
     typedef Eigen::Matrix<Scalar,3,1> Vector3;
     std::vector<Vector3> verts;
     std::vector<mtao::IndexSet<3> > indexsets;
@@ -124,7 +124,7 @@ SimplicialComplex<NumericalTraits<Scalar,3>,2> * readOBJtoSimplicialComplex(std:
 
 
 template <typename Scalar>
-SimplicialComplex<NumericalTraits<Scalar,3>,2> * readOBJtoSimplicialComplex(const std::string & str)
+SimplicialComplex<mtao_internal::num_traits<Scalar,3>,2> * readOBJtoSimplicialComplex(const std::string & str)
 {
     std::ifstream is(str.c_str());
     if(!is.is_open()){return 0;}

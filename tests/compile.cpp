@@ -41,7 +41,7 @@ int main()
         std::cout << m;
     }
     std::cout << std::endl;
-    auto simps = mtao::simplicesToRenderable<1>(sc);
+    auto simps = mtao_internal::simplicesToRenderable<1>(sc);
     for(auto&& a: simps)
     {
         std::cout << a << " ";
@@ -53,7 +53,7 @@ int main()
         std::cout << m;
     }
     std::cout << std::endl;
-    simps = mtao::simplicesToRenderable<2>(sc);
+    simps = mtao_internal::simplicesToRenderable<2>(sc);
     for(auto&& a: simps)
     {
         std::cout << a << " ";

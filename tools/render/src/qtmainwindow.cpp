@@ -58,6 +58,8 @@ MainWindow::MainWindow(QWidget * parent, FormBar * bar): QMainWindow(parent), m_
     }
     dock->setWidget(m_formbar);
     addDockWidget(Qt::LeftDockWidgetArea, dock);
+    connect(this,SIGNAL(loadingNewMesh())
+            , m_glwidget,SLOT(unloadMesh()));
     connect(this,SIGNAL(formLoaded(const FormPackage &))
             , m_formbar,SLOT(receiveForm(const FormPackage &)));
     connect(this,SIGNAL(particlesLoaded(std::shared_ptr<VertexBufferObject>))
@@ -77,6 +79,7 @@ MainWindow::MainWindow(QWidget * parent, FormBar * bar): QMainWindow(parent), m_
 
 
 void MainWindow::openFile(const QString & filename) {
+    emit loadingNewMesh();
     auto package = std::make_shared<MeshPackage>();
     m_mesh.reset(readOBJtoSimplicialComplex<float>(filename.toStdString()));
     std::cout << "Read a mesh with verts:faces: " << m_mesh->vertices().size()<< ":" << m_mesh->numSimplices() << std::endl;
@@ -84,10 +87,10 @@ void MainWindow::openFile(const QString & filename) {
     typedef typename TriangleMeshf::Vector Vector;
 
     package->vertices = m_mesh->vertices();//copy here so we can normalize coordinates
-    package->indices = mtao::template simplicesToRenderable<2>(*m_mesh);
+    package->indices = mtao_internal::template simplicesToRenderable<2>(*m_mesh);
     package->facevertices.resize(package->indices.size());
     package->faceindices.resize(package->indices.size());
-    package->edgeindices = mtao::simplicesToRenderable<1>(*m_mesh);
+    package->edgeindices = mtao_internal::simplicesToRenderable<1>(*m_mesh);
     package->edgevertices.resize(package->edgeindices.size());
 
 
@@ -103,9 +106,11 @@ void MainWindow::openFile(const QString & filename) {
     auto& edgeverts = package->edgevertices;
 
     //    mtao::normalizeInPlace(verts);//Normalize!!
+    std::cout << "Normalizing vertices..." << std::endl;
     m_bbox = mtao::getBoundingBox(verts);
     mtao::normalizeToBBoxInPlace(verts,m_bbox);
 
+    std::cout << "Writing primal verts" << std::endl;
     std::transform(packed_indices.cbegin(), packed_indices.cend(), faceverts.begin(),
                    [&verts](const unsigned int ind)->typename std::remove_reference<decltype(faceverts)>::type::value_type
     {
@@ -113,11 +118,13 @@ void MainWindow::openFile(const QString & filename) {
     });
 
     i=0;
+    std::cout << "Writing primal face indices" << std::endl;
     for(unsigned int & ind: faceindices)
     {
         ind = i++;
     }
 
+    std::cout << "Writing primal edge vertices" << std::endl;
     std::transform(edgeindices.cbegin(), edgeindices.cend(), edgeverts.begin(),
                    [&verts](const unsigned int ind)->typename std::remove_reference<decltype(edgeverts)>::type::value_type
     {
@@ -125,6 +132,7 @@ void MainWindow::openFile(const QString & filename) {
     });
 
     i=0;
+    std::cout << "Writing primal edge indices" << std::endl;
     for(unsigned int & ind: edgeindices)
     {
         ind = i++;
@@ -134,6 +142,7 @@ void MainWindow::openFile(const QString & filename) {
 
 
 
+    std::cout << "Writing dual quantities" << std::endl;
     auto& dual_vertices = package->dual_vertices;
     auto& dual_indices = package->dual_indices;
     auto& dual_edgeindices = package->dual_edgeindices;
@@ -163,6 +172,7 @@ void MainWindow::openFile(const QString & filename) {
 
     package->num_dual_verts = m_mesh->template numSimplices<2>();
 
+    std::cout << "Writing dual verts" << std::endl;
     for(auto&& s: m_mesh->template simplices<2>()) {
         dual_vertices[s.Index()+offset2] = s.Center();
     }
@@ -175,6 +185,7 @@ void MainWindow::openFile(const QString & filename) {
         dual_vertices[s.Index()+offset0] = s.Center();
     }
 
+    std::cout << "Writing dual mesh indices" << std::endl;
     for(int i=0; i < m_mesh->template simplices<0>().size(); ++i) {
         auto&& s0 = m_mesh->template simplex<0>(i);
 
@@ -192,13 +203,16 @@ void MainWindow::openFile(const QString & filename) {
 
 
 
+    std::cout << "Writing dual edge indices" << std::endl;
     for(int i=0; i < m_mesh->template simplices<1>().size(); ++i) {
         auto&& s = m_mesh->template simplex<1>(i);
         SparseMatrix::InnerIterator it(d1, s.Index());
+        if(!it) continue;
         auto&& s1 = m_mesh->template simplex<2>(it.row());
         dual_edgeindices[2*i] = 2*i;
         dual_edgeverts[2*i] = s1.Center();
         ++it;
+        if(!it) continue;
         auto&& s2 = m_mesh->template simplex<2>(it.row());
         dual_edgeindices[2*i+1] = 2*i+1;
         dual_edgeverts[2*i+1] = s2.Center();
@@ -210,16 +224,18 @@ void MainWindow::openFile(const QString & filename) {
 
 
 
+    std::cout << "Reserving" << std::endl;
 
     dual_faceverts.clear();
     dual_faceverts.reserve(3*m_mesh->template numSimplices<2>());
     dual_faceindices.clear();
-    dual_faceverts.reserve(3*m_mesh->template numSimplices<2>());
+    dual_faceindices.reserve(3*m_mesh->template numSimplices<2>());
 
     m_dual_vertex_form_indices.clear();
     m_dual_vertex_form_indices.reserve(m_mesh->template numSimplices<0>());
 
     int count=0;
+    std::cout << "Writing dual face indices" << std::endl;
     for(int i=0; i < m_mesh->template simplices<0>().size(); ++i) {
         auto&& s0 = m_mesh->template simplex<0>(i);
 
@@ -227,6 +243,7 @@ void MainWindow::openFile(const QString & filename) {
             auto&& s1 = m_mesh->template simplex<1>(it1.row());
 
             SparseMatrix::InnerIterator it2(d1, s1.Index());
+        if(!it2) continue;
 
             auto&& s2 = m_mesh->template simplex<2>(it2.row());
             dual_faceverts.push_back(s0.Center());
@@ -239,6 +256,7 @@ void MainWindow::openFile(const QString & filename) {
             }
             ++count;
             ++it2;
+        if(!it2) continue;
 
             auto&& s2b = m_mesh->template simplex<2>(it2.row());
             dual_faceverts.push_back(s0.Center());
@@ -264,6 +282,7 @@ void MainWindow::openFile(const QString & filename) {
 
 
 
+    std::cout << "Normalizing duals" << std::endl;
 
     mtao::normalizeToBBoxInPlace(dual_faceverts,m_bbox);
     mtao::normalizeToBBoxInPlace(dual_edgeverts,m_bbox);
@@ -297,6 +316,7 @@ void MainWindow::openFile(const QString & filename) {
 
 
 
+    std::cout << "Done loading mesh metadata" << std::endl;
     emit meshLoaded(package);
 }
 

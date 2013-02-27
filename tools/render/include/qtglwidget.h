@@ -67,5 +67,6 @@ public slots:
     void enableForm(const QString & formname);
     void disableForm(const QString & name);
     void clearForms();
+    void unloadMesh();
 };
 #endif

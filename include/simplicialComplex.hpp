@@ -1,12 +1,13 @@
 #ifndef _SIMPLICIAL_COMPLEX_H_
 #define _SIMPLICIAL_COMPLEX_H_
 
+#include <set>
 #include "simplex.hpp"
 #include <vector>
 #include <array>
 #include <algorithm>
-#include <set>
 #include <iostream>
+#include "util.hpp"
 
 //Input N-simplices to generate the whole simplicial complex
 //Assumes that the input mesh of simplices is manifold
@@ -14,13 +15,12 @@
 //NumTraits::N identifies the dimension of the space
 //N determines the maximal simplex dimension
 
-namespace mtao
+namespace mtao_internal
 {
 constexpr int cefactorial(int n)
 {
     return n > 0 ? n * cefactorial(n-1):1;
 }
-};
 
 /*! A 0-simplicial complex only manages
 * the vertices and some trivalish set of simplices.  vertices without any higher order
@@ -34,7 +34,7 @@ protected:
     template <int M>
     struct TraitsContainer{
         typedef typename std::enable_if<M==0
-        , SimplicialComplexPrivateBase<NT,DimensionalTraits<DT::Top, M> > >::type type;
+        , SimplicialComplexPrivateBase<NT,mtao_internal::dimensional_traits<DT::Top, M> > >::type type;
     };
     typedef NT NumTraits;
     static const int Dim = 0;
@@ -177,7 +177,7 @@ template <typename NT, typename DT> auto SimplicialComplexPrivateBase<NT,DT>
     {
         m.col(i) = this->m_vertices[i] - origin;
     }
-    s.dualVolume += std::sqrt((m.transpose()*m).determinant())/mtao::cefactorial(TopDim-1);
+    s.dualVolume += std::sqrt((m.transpose()*m).determinant())/cefactorial(TopDim-1);
 }
 
 
@@ -226,7 +226,7 @@ public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     template <int M>
     struct TraitsContainer{
-        typedef DimensionalTraits<DT::Top,M> dimtype;
+        typedef mtao_internal::dimensional_traits<DT::Top,M> dimtype;
         typedef typename std::conditional<M==0
         , SimplicialComplexPrivateBase<NT,typename DT::BottomTraits >
         , SimplicialComplexPrivate<NT,dimtype >
@@ -234,10 +234,10 @@ public:
         typedef Simplex<NT,dimtype> simplextype;
     };
     typedef NT NumTraits;
-    typedef DT DimensionalTraits;
-    static const int Dim = DimensionalTraits::Dim;
-    static const int N = DimensionalTraits::Dim;
-    static const int TopDim = DimensionalTraits::Top;
+    typedef DT dimensional_traits;
+    static const int Dim = dimensional_traits::Dim;
+    static const int N = dimensional_traits::Dim;
+    static const int TopDim = dimensional_traits::Top;
     static const int EmbeddedDim = NT::Dim;
     typedef typename NumTraits::Vector Vector;
     typedef typename NumTraits::Scalar Scalar;
@@ -294,8 +294,8 @@ public:
     template <bool Signed = (N == EmbeddedDim)>
     void computeVolume(NSimplex & s) {
         auto&& m = simplexToBaryMatrix(s);
-        if(Signed) {s.volume = m.determinant()/mtao::cefactorial(N);}
-        else {s.volume = std::sqrt((m.transpose()*m).determinant())/mtao::cefactorial(N);}
+        if(Signed) {s.volume = m.determinant()/cefactorial(N);}
+        else {s.volume = std::sqrt((m.transpose()*m).determinant())/cefactorial(N);}
     }
 
     //====================================================
@@ -555,7 +555,7 @@ template <typename NT, typename DT> auto SimplicialComplexPrivate<NT,DT>
         for(int i=N; i < static_cast<int>(clist.size())-1; ++i) {
             m.col(i-N) = clist[i] - origin;
         }
-        s.dualVolume += std::sqrt((m.transpose()*m).determinant())/mtao::cefactorial(TopDim - N);
+        s.dualVolume += std::sqrt((m.transpose()*m).determinant())/cefactorial(TopDim - N);
     }
     for(typename decltype(m_boundary)::InnerIterator it(m_boundary, s.Index()); it; ++it) {
         SCm1::genDualVolume(SCm1::simplexByIndex(it.row()), clist);
@@ -677,6 +677,7 @@ auto SimplicialComplexPrivate<NT,DT>::barycentricCoords(const NSimplex & s, cons
 
 
 
+};
 
 
 
@@ -705,12 +706,13 @@ auto SimplicialComplexPrivate<NT,DT>::barycentricCoords(const NSimplex & s, cons
 
 
 template <typename NT, int N_>
-class SimplicialComplex: public SimplicialComplexPrivate<NT,DimensionalTraits<N_,N_> > {
-private: typedef SimplicialComplexPrivate<NT,DimensionalTraits<N_,N_> > PrivateParent;
+class SimplicialComplex: public mtao_internal::SimplicialComplexPrivate<NT,mtao_internal::dimensional_traits<N_,N_> > {
+private: typedef mtao_internal::SimplicialComplexPrivate<NT,mtao_internal::dimensional_traits<N_,N_> > PrivateParent;
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     typedef NT NumTraits;
-    typedef DimensionalTraits<N_,N_> DimTraits;
+    typedef mtao_internal::dimensional_traits<N_,N_> DimTraits;
+    typedef mtao_internal::SimplicialComplexTraits<NumTraits, DimTraits> SCTraits;
     static const int Dim = N_;
     static const int N = N_;
     static const int TopDim = N_;
@@ -725,10 +727,10 @@ public:
 
     template <int M=N>
     struct TraitsContainer{
-        typedef DimensionalTraits<DimTraits::Top,M> dimtype;
+        typedef mtao_internal::dimensional_traits<DimTraits::Top,M> dimtype;
         typedef typename std::conditional<M==0
-        , SimplicialComplexPrivateBase<NT,typename DimTraits::BottomTraits >
-        , SimplicialComplexPrivate<NT,dimtype >
+        , mtao_internal::SimplicialComplexPrivateBase<NT,typename DimTraits::BottomTraits >
+        , mtao_internal::SimplicialComplexPrivate<NT,dimtype >
         >::type complextype;
         typedef Simplex<NT,dimtype> simplextype;
 
@@ -836,13 +838,13 @@ public:
 };
 
 
-typedef SimplicialComplex<NumericalTraits<float, 3>, 2> TriangleMeshf;
-typedef SimplicialComplex<NumericalTraits<float, 3>, 3> TetrahedralMeshf;
-typedef SimplicialComplex<NumericalTraits<double, 3>, 2> TriangleMeshd;
-typedef SimplicialComplex<NumericalTraits<double, 3>, 3> TetrahedralMeshd;
+typedef SimplicialComplex<mtao_internal::num_traits<float, 3>, 2> TriangleMeshf;
+typedef SimplicialComplex<mtao_internal::num_traits<float, 3>, 3> TetrahedralMeshf;
+typedef SimplicialComplex<mtao_internal::num_traits<double, 3>, 2> TriangleMeshd;
+typedef SimplicialComplex<mtao_internal::num_traits<double, 3>, 3> TetrahedralMeshd;
 //Default to double :)
-typedef SimplicialComplex<NumericalTraits<double, 3>, 2> TriangleMesh;
-typedef SimplicialComplex<NumericalTraits<double, 3>, 3> TetrahedralMesh;
+typedef SimplicialComplex<mtao_internal::num_traits<double, 3>, 2> TriangleMesh;
+typedef SimplicialComplex<mtao_internal::num_traits<double, 3>, 3> TetrahedralMesh;
 
 
 

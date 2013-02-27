@@ -434,6 +434,9 @@ void GLWidget::disableForm(const QString &formname) {
 void GLWidget::clearForms() {
     m_active_forms.clear();
 }
+void GLWidget::unloadMesh() {
+    m_meshpackage.reset();
+}
 bool operator<(const FormPackage & a, const FormPackage & b) {
     return a.title < b.title;
 }

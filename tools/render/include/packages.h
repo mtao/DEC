@@ -48,7 +48,7 @@ struct FormPackage{
 };
 
 
-namespace mtao{
+namespace mtao_internal{
     template <typename Form>
         constexpr RenderType formToRendertype(const Form &) {
             return RenderType(

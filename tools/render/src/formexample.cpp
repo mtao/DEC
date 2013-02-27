@@ -78,7 +78,6 @@ void ExampleWidget::openFile(const QString & filename) {
     for(int i=0; i < ps.size(); ++i) {
         ps[i] = mtao::normalizeToBBox(particles[i].p(),m_bbox);
     }
-    //emit particlesLoaded(std::make_shared<VertexBufferObject>(&p.p()(0),1,GL_STATIC_DRAW,3));
     emit particlesLoaded(std::make_shared<VertexBufferObject>((void*)ps.data(),ps.size(),GL_STATIC_DRAW,3));
 }
 
