@@ -81,10 +81,10 @@ MainWindow::MainWindow(QWidget * parent, FormBar * bar): QMainWindow(parent), m_
 void MainWindow::openFile(const QString & filename) {
     emit loadingNewMesh();
     auto package = std::make_shared<MeshPackage>();
-    m_mesh.reset(readOBJtoSimplicialComplex<float>(filename.toStdString()));
+    m_mesh.reset(readOBJtoSimplicialComplex<MeshType>(filename.toStdString()));
     std::cout << "Read a mesh with verts:faces: " << m_mesh->vertices().size()<< ":" << m_mesh->numSimplices() << std::endl;
     m_dec.reset(new decltype(m_dec)::element_type(*m_mesh));
-    typedef typename TriangleMeshf::Vector Vector;
+    typedef typename MeshType::Vector Vector;
 
     package->vertices = m_mesh->vertices();//copy here so we can normalize coordinates
     package->indices = mtao_internal::template simplicesToRenderable<2>(*m_mesh);
@@ -294,6 +294,9 @@ void MainWindow::openFile(const QString & filename) {
 
 
 
+    //package->vertex_normals = m_mesh->getNormals();
+    //package->vertex_normals = m_mesh->getNormals(NormalTriangleMesh::Area_Normal);
+    package->vertex_normals = m_mesh->getNormals(NormalTriangleMesh::Angle_Normal);
 
 
 

@@ -212,6 +212,7 @@ void GLWidget::receiveMesh(std::shared_ptr<const MeshPackage> package) {
     m_meshbuffers.dual_vertices = local_mtao::makevbo(package->dual_vertices);
     m_meshbuffers.dual_facevertices = local_mtao::makevbo(package->dual_facevertices);
     m_meshbuffers.dual_edgevertices = local_mtao::makevbo(package->dual_edgevertices);
+    m_normalvbo = local_mtao::makevbo(package->vertex_normals);
 
 
 
@@ -242,6 +243,7 @@ void GLWidget::paintGL() {
     mat_m = glm::rotate(mat_m, (float)m_rotation.z(), glm::vec3(0.f,0.f,1.f));
     mat_mv = mat_v * mat_m;
     mat_mvp = mat_p * mat_mv;
+    mat_normal_transform = glm::inverse(glm::transpose(mat_mv));
 
 
     if(!m_meshpackage) return;
@@ -269,7 +271,6 @@ void GLWidget::paintGL() {
         }
     }
 
-    /*
     if(!renderedFace) {
         if(renderedSomething) {
             glUniform1f(glGetUniformLocation(m_shader->programId, "normal_offset"), 0.0001f);
@@ -283,11 +284,15 @@ void GLWidget::paintGL() {
                            1, GL_FALSE, glm::value_ptr(mat_mvp));
         glUniformMatrix4fv(glGetUniformLocation(m_shader->programId, "P"),
                            1, GL_FALSE, glm::value_ptr(mat_p));
+        glUniformMatrix4fv(glGetUniformLocation(m_shader->programId, "NT"),
+                           1, GL_FALSE, glm::value_ptr(mat_normal_transform));
         const GLint vertexAttribId = m_shader->getAttribLocation("vertex");
+        const GLint normalAttribId = m_shader->getAttribLocation("normal");
         m_meshbuffers.vertices->bind(vertexAttribId);
+        m_normalvbo->bind(normalAttribId);
         m_meshbuffers.indices->render();
         m_shader->release();
-    }*/
+    }
     if(m_particlevbo) {
         m_particleshader->bind(false);
         glUniformMatrix4fv(glGetUniformLocation(m_particleshader->programId, "MVP"),

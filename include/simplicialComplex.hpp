@@ -228,9 +228,9 @@ public:
     struct TraitsContainer{
         typedef mtao_internal::dimensional_traits<DT::Top,M> dimtype;
         typedef typename std::conditional<M==0
-        , SimplicialComplexPrivateBase<NT,typename DT::BottomTraits >
-        , SimplicialComplexPrivate<NT,dimtype >
-        >::type complextype;
+                , SimplicialComplexPrivateBase<NT,typename DT::BottomTraits >
+                , SimplicialComplexPrivate<NT,dimtype >
+                >::type complextype;
         typedef Simplex<NT,dimtype> simplextype;
     };
     typedef NT NumTraits;
@@ -251,7 +251,7 @@ public:
     typedef Eigen::Matrix<Scalar,EmbeddedDim, N+1> WhitneyBasis;
     typedef Eigen::Matrix<Scalar,N+1, 1> BarycentricCoordinates;
     typedef Eigen::Matrix<Scalar,N+1, 1> WhitneyCoefficients;
-    protected:
+protected:
     //====================================================
     //====================================================
     //==               Constructors                     ==
@@ -387,7 +387,10 @@ SimplicialComplexPrivate(const std::vector<unsigned int > & tuples, const std::v
     m_simplices.resize(tuples.size()/(N+1));
     for(int i=0; i < m_simplices.size(); ++i)
     {
-        std::copy(&tuples[(N+1)*i], &tuples[(i+1)*(N+1)], m_simplices[i].getIndexSet.begin());
+        for(int j=0; j < N+1; ++j){
+            m_simplices[i][j] = tuples[(N+1)*i + j];
+        }
+        //        std::copy(&tuples[(N+1)*i], &tuples[(i+1)*(N+1)], m_simplices[i].getIndexSet().begin());
     }
     m_simplices.resize(tuples.size());
     std::copy(tuples.begin(), tuples.end(), m_simplices.begin());
@@ -615,18 +618,18 @@ template <typename NT,typename DT> auto SimplicialComplexPrivate<NT,DT>
 }
 
 
-    //====================================================
-    //====================================================
-    //==            Local Accessors                     ==
-    //====================================================
-    //====================================================
+//====================================================
+//====================================================
+//==            Local Accessors                     ==
+//====================================================
+//====================================================
 
 template <typename NT,typename DT> auto SimplicialComplexPrivate<NT,DT>
 ::verticesBySimplex(const NSimplex & s) const
-    -> Eigen::Matrix<Scalar, EmbeddedDim, Dim+1> {
+-> Eigen::Matrix<Scalar, EmbeddedDim, Dim+1> {
     Eigen::Matrix<Scalar, EmbeddedDim, Dim+1> m;
     for(int i=0; i <= Dim;++i) {
-        m.col(i) = SC0::m_vertices[i];
+        m.col(i) = SC0::m_vertices[s[i]];
     }
     return m;
 }
@@ -654,7 +657,7 @@ void SimplicialComplexPrivate<NT,DT>::genWhitneyBases()
 
             //basis vector measured from center to end
             basis.col(sind) = (//TraitsContainer<0>::complextype::m_vertices[s.oppositeIndex(sm1)]
-                    s.Center()-sm1.Center()).normalized();
+                               s.Center()-sm1.Center()).normalized();
         }
         return basis;
     });
@@ -709,7 +712,6 @@ template <typename NT, int N_>
 class SimplicialComplex: public mtao_internal::SimplicialComplexPrivate<NT,mtao_internal::dimensional_traits<N_,N_> > {
 private: typedef mtao_internal::SimplicialComplexPrivate<NT,mtao_internal::dimensional_traits<N_,N_> > PrivateParent;
 public:
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     typedef NT NumTraits;
     typedef mtao_internal::dimensional_traits<N_,N_> DimTraits;
     typedef mtao_internal::SimplicialComplexTraits<NumTraits, DimTraits> SCTraits;
@@ -825,7 +827,7 @@ public:
     }
     template <int M=Dim>
     auto whitneyBasis(const typename TraitsContainer<M>::simplextype & simplex) const
-        -> decltype(TraitsContainer<M>::complextype::m_whitneyBases[simplex.Index()]) {
+    -> decltype(TraitsContainer<M>::complextype::m_whitneyBases[simplex.Index()]) {
         return TraitsContainer<M>::complextype::m_whitneyBases[simplex.Index()];
     }
     template <int M=Dim>
@@ -845,8 +847,6 @@ typedef SimplicialComplex<mtao_internal::num_traits<double, 3>, 3> TetrahedralMe
 //Default to double :)
 typedef SimplicialComplex<mtao_internal::num_traits<double, 3>, 2> TriangleMesh;
 typedef SimplicialComplex<mtao_internal::num_traits<double, 3>, 3> TetrahedralMesh;
-
-
 
 
 

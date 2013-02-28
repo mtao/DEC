@@ -27,7 +27,6 @@ struct FormExpression
     Expression & data(){return expr;}
     const Expression & constData() const {return expr;}
 
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     Expression expr;
 
 };
@@ -42,7 +41,6 @@ private:
 public:
     typedef form_operator_traits<Dim,Type1,-1,Type1,N1,true> Traits;
     typedef typename DynamicVector::Scalar Scalar;
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     typedef FormExpression<Traits,DynamicVector> Parent;
     using Parent::expr;
     //typedef typename Parent::ExpressionType ExpressionType;
@@ -85,7 +83,6 @@ private:
     typedef FormOperator<Traits_,MatrixType> MyType;
 public:
     typedef Traits_ Traits;
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     typedef  FormExpression<Traits, MatrixType> Parent;
     using Parent::expr;
     //template <typename Expr>
@@ -308,7 +305,6 @@ class DEC: public mtao_internal::template dec_traits<Complex_,Interior_>::factor
         , public mtao_internal::template dec_traits<Complex_,Interior_>::operator_type
 {
 public:
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     typedef Complex_ Complex;
     const static bool Interior = Interior_;
     typedef mtao_internal::template dec_traits<Complex,Interior> DECTraits;
@@ -328,6 +324,10 @@ public:
         , OC(sc)
         , m_sc(sc)
     {
+    }
+    void init() {
+        FF::init(m_sc);
+        OC::init(m_sc);
     }
 
 

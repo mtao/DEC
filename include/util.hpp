@@ -44,37 +44,4 @@ typename Complex::Vector projectToSimplex(const Complex & sc, const typename Com
 };
 
 
-/* Triangle mesh with normals*/
-/*
-class TriangleMesh: public SimplicialComplex<NumericalTraits<float, 3>
-{
-    public:
-    typdef SimplicialComplex<NumericalTraits<float, 3> > SCParent;
-    protected:
-    TriangleMesh() {}
-    TriangleMesh(const std::vector<NSimplex > & simplices, const std::vector<Vector> & vertices)
-        : SCParent(simplices,vertices)
-    {
-        init();
-    }
-    TriangleMesh(const std::vector<mtao::IndexSet<N+1> > & tuples, const std::vector<Vector> & vertices)
-        : SCParent(tuples,vertices)
-    {
-        init();
-    }
-
-    TriangleMesh(const std::vector<unsigned int > & tuples, const std::vector<Vector> & vertices)
-        : SCParent(tuples,vertices)
-    {
-        init();
-    }
-    void init();
-
-};
-
-void TriangleMesh::init() {
-    computeNormals();
-}
-*/
-
 #endif

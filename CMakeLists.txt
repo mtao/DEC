@@ -38,6 +38,9 @@ ADD_DEFINITIONS(-std=c++11)
 ADD_DEFINITIONS(-Wall)
 ADD_DEFINITIONS(-Werror)
 
+SET(DEC_SOURCES
+    src/trianglemesh.cpp
+    )
 SET(DEC_HEADERS
     include/simplex.hpp
     include/simplicialComplex.hpp
@@ -50,10 +53,12 @@ SET(DEC_HEADERS
     include/geometry.hpp
     include/render.hpp
     include/advection.hpp
+    include/trianglemesh.h
     #include/kdtree.hpp
     )
 
 ADD_CUSTOM_TARGET(headers SOURCES ${DEC_HEADERS})
+ADD_LIBRARY(dec STATIC ${DEC_SOURCES} ${DEC_HEADERS})
 
 #SET (CMAKE_CXX_COMPILER             "/usr/bin/clang++")
 #SET (CMAKE_CXX_COMPILER             "/usr/bin/g++")

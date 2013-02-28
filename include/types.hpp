@@ -116,10 +116,17 @@ struct form_operator_traits{
 
 };
 
+};
+
 #endif
 #ifndef _DEC_TRAITS_H_
 #define _DEC_TRAITS_H_
 
+
+template <typename Complex_, bool Interior_>
+class DEC;
+
+namespace mtao_internal{
 template <typename Traits, typename Expression>
 struct FormExpression;
 template <typename Traits, typename Matrixtype>
@@ -136,10 +143,6 @@ class OperatorContainer;
 
 template <typename DECTraits>
 class FormFactory;
-
-template <typename Complex_, bool Interior_>
-class DEC;
-
 template <typename Complex_, bool Interior_ = false>
 struct dec_traits{
 private:

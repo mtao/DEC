@@ -4,11 +4,11 @@
 #include <boost/algorithm/string.hpp>
 #include "simplicialComplex.hpp"
 #include <fstream>
-template <typename Scalar>
-SimplicialComplex<mtao_internal::num_traits<Scalar,3>,2> * readOBJtoSimplicialComplex(std::istream & is)
+template <typename MeshType = SimplicialComplex<mtao_internal::num_traits<float,3>,2> >
+MeshType * readOBJtoSimplicialComplex(std::istream & is)
 {
 
-    typedef SimplicialComplex<mtao_internal::num_traits<Scalar,3>, 2> TriangleMesh;
+    typedef typename MeshType::NumTraits::Scalar Scalar;
     typedef Eigen::Matrix<Scalar,3,1> Vector3;
     std::vector<Vector3> verts;
     std::vector<mtao::IndexSet<3> > indexsets;
@@ -118,17 +118,17 @@ SimplicialComplex<mtao_internal::num_traits<Scalar,3>,2> * readOBJtoSimplicialCo
         }
     }
 #endif
-    return new TriangleMesh(indexsets, verts);
+    return new MeshType(indexsets, verts);
 
 }
 
 
-template <typename Scalar>
-SimplicialComplex<mtao_internal::num_traits<Scalar,3>,2> * readOBJtoSimplicialComplex(const std::string & str)
+template <typename MeshType = SimplicialComplex<mtao_internal::num_traits<float,3>, 2> >
+MeshType * readOBJtoSimplicialComplex(const std::string & str)
 {
     std::ifstream is(str.c_str());
     if(!is.is_open()){return 0;}
-    return readOBJtoSimplicialComplex<Scalar>(is);
+    return readOBJtoSimplicialComplex<MeshType>(is);
 }
 
 template <typename SimplicialComplex>

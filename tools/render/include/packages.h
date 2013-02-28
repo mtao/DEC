@@ -36,6 +36,7 @@ struct MeshPackage {
     std::vector<unsigned int> dual_faceindices;
     std::vector<Eigen::Vector3f> dual_edgevertices;
     std::vector<unsigned int> dual_edgeindices;
+    std::vector<Eigen::Vector3f> vertex_normals;
 };
 
 

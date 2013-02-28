@@ -3,6 +3,7 @@
 #include <QMainWindow>
 #include "../include/qtglwidget.h"
 #include "../../../include/dec.hpp"
+#include "../../../include/trianglemesh.h"
 #include "packages.h"
 #include "formbar.h"
 
@@ -11,6 +12,8 @@ class MainWindow: public QMainWindow {
     Q_OBJECT
 public:
     MainWindow(QWidget *parent = 0,FormBar * bar = 0);
+    typedef NormalTriangleMesh MeshType;
+    typedef DEC<MeshType, true > DECType;
 
 protected:
     void keyPressEvent(QKeyEvent *);
@@ -20,10 +23,10 @@ public slots:
     virtual void openFile(const QString & filename);
 protected:
     GLWidget * m_glwidget;
-    std::unique_ptr<TriangleMeshf> m_mesh;
-    std::unique_ptr<DEC<TriangleMeshf,true> > m_dec;
+    std::unique_ptr<MeshType> m_mesh;
+    std::unique_ptr<DECType> m_dec;
     std::vector<unsigned int> m_dual_vertex_form_indices;
-    Eigen::AlignedBox<TriangleMeshf::Scalar, TriangleMeshf::EmbeddedDim> m_bbox;
+    Eigen::AlignedBox<MeshType::Scalar, MeshType::EmbeddedDim> m_bbox;
     template <typename Form>
     auto makeFormPackage(const QString & name, const Form & form)
     ->

@@ -37,7 +37,7 @@ private:
     QTimer* m_timer = 0;
     int m_renderType = RT_NONE;
     bool m_doRender = false;
-    glm::mat4 mat_mvp, mat_mv, mat_m, mat_v, mat_p;
+    glm::mat4 mat_mvp, mat_mv, mat_m, mat_v, mat_p, mat_normal_transform;
     float m_aspectRatio = 1;
     std::unique_ptr<ShaderProgram> m_shader;
     std::unique_ptr<ShaderProgram> m_vertshader;
@@ -47,6 +47,7 @@ private:
     MeshBuffers m_meshbuffers;
     std::shared_ptr<const MeshPackage> m_meshpackage;
     std::shared_ptr<VertexBufferObject> m_particlevbo;
+    std::shared_ptr<VertexBufferObject> m_normalvbo;
     std::map<QString, FormPackage> m_formpackages;
     std::set<QString> m_active_forms;
 

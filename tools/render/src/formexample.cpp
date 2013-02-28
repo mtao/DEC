@@ -61,7 +61,7 @@ void ExampleWidget::openFile(const QString & filename) {
     std::cout << m << std::endl;
     std::cout << m.transpose() * m << std::endl;
     /*
-    std::vector<Particle<DEC<TriangleMeshf,true> > > particles(100, Particle<DEC<TriangleMeshf,true> >(*m_dec, Vector::Random()));
+    std::vector<Particle<DECType > particles(100, Particle<DECType >(*m_dec, Vector::Random()));
     for(auto&& p: particles) {
         p.p() = Vector::Random();
         mtao::unnormalizeToBBoxInPlace(p.p(), m_bbox);
@@ -69,10 +69,10 @@ void ExampleWidget::openFile(const QString & filename) {
         p.project();
     }
     */
-    std::vector<Particle<DEC<TriangleMeshf,true> > > particles(m_mesh->numSimplices(), Particle<DEC<TriangleMeshf,true> >(*m_dec, Vector::Random()));
+    std::vector<Particle<DECType > > particles(m_mesh->numSimplices(), Particle<DECType >(*m_dec, Vector::Random()));
     std::transform(m_mesh->simplices().begin(), m_mesh->simplices().end(), particles.begin(), [&] (const decltype(m_mesh->simplices()[0]) & s)
-            -> Particle<DEC<TriangleMeshf,true> > {
-        return Particle<DEC<TriangleMeshf,true> >(*m_dec, s.Center());
+            -> Particle<DECType > {
+        return Particle<DECType >(*m_dec, s.Center());
     });
     std::vector<Vector> ps(particles.size());
     for(int i=0; i < ps.size(); ++i) {

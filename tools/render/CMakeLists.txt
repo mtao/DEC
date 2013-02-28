@@ -58,9 +58,9 @@ TARGET_LINK_LIBRARIES(decrender ${QT_LIBRARIES} GLEW GL)
 
 
 ADD_EXECUTABLE(qtRender src/qtmain.cpp)
-TARGET_LINK_LIBRARIES(qtRender ${QT_LIBRARIES} decrender)
+TARGET_LINK_LIBRARIES(qtRender ${QT_LIBRARIES} decrender dec)
 
 
 ADD_EXECUTABLE(formExample src/formexample.cpp)
-TARGET_LINK_LIBRARIES(formExample ${QT_LIBRARIES} decrender)
+TARGET_LINK_LIBRARIES(formExample ${QT_LIBRARIES} decrender dec)
 #TARGET_LINK_LIBRARIES(qtRender ${QT_LIBRARIES} GLEW GL arpack)
