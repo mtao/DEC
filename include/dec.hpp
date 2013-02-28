@@ -375,19 +375,29 @@ public:
         VelocityCoefficients coeffs;
         auto&& b = m_sc.template b<Dim>();
         auto&& basis = m_sc.whitneyBasis(simplex);
+        //auto&& centers = m_sc.whitneyCenters(simplex);
         int i=0;
-        for(typename decltype(b)::InnerIterator it(b,simplex.Index()); it; ++it, ++i) {
-            auto&& lower = m_sc.simplex(it.row());
+        for(typename SparseMatrixColMajor::InnerIterator it(b,simplex.Index()); it; ++it, ++i) {
+            auto&& lower = m_sc.template simplex<Dim-1>(it.row());
             coeffs(i) = (simplex.isSameSign(lower)?1:-1) * form(simplex[i])
                     * basis.col(i).dot(p-lower.Center());
+            std::cout << "[" << form(simplex[i]) << "] " << basis.col(i).transpose() << " [" << (p-lower.Center()).transpose() << "]" << coeffs(i) << std::endl;
         }
         v = m_sc.whitneyBasis(simplex) * coeffs;
+        std::cout << "Result: " <<v.transpose() << std::endl;
     }
-    Vector getVelocityInPlace(const Vector & p, const typename Complex::template TraitsContainer<Dim>::simplextype & simplex, const Nm1Form & form) {
+    Vector getVelocity(const Vector & p, const typename Complex::template TraitsContainer<Dim>::simplextype & simplex, const Nm1Form & form) {
         Vector v;
         getVelocityInPlace(p,simplex,form,v);
         return v;
 
+    }
+    std::vector<Vector> velocityField(const Nm1Form & form) {
+    std::vector<Vector> vfield(m_sc.numSimplices());
+        for(auto&& s: m_sc.constSimplices()) {
+            getVelocityInPlace(s.Center(), s,form,vfield[s.Index()]);
+        }
+        return vfield;
     }
     /*
     affineInPlace(const NSimplex & s, const Vector & v, std::array<T, N+1> & res) {

@@ -327,6 +327,7 @@ protected:
     std::vector<Triplet > m_boundaryTriplets;
     //    std::vector< std::array<Vector,N+1 > > m_whitneyBases;
     std::vector< WhitneyBasis > m_whitneyBases;
+    std::vector< WhitneyBasis > m_whitneyCenters;
     SparseMatrixColMajor m_boundary;//Rows are n-1 simplices cols are n simplices
     DiagonalMatrix m_interior;
     std::set<NSimplex> m_simplexSet;
@@ -645,27 +646,34 @@ template <typename NT, typename DT>
 void SimplicialComplexPrivate<NT,DT>::genWhitneyBases()
 {
     m_whitneyBases.resize(m_simplices.size());
-    std::transform(m_simplices.begin(), m_simplices.end(), m_whitneyBases.begin(), [&](const NSimplex & s)
-                   -> WhitneyBasis
-    {
-        WhitneyBasis basis;
+    m_whitneyCenters.resize(m_simplices.size());
+    for(auto&& s: m_simplices) {
+        auto&& basis = m_whitneyBases[s.Index()];
+        auto&& centers = m_whitneyCenters[s.Index()];
         int sind=0;
         for(typename decltype(m_boundary)::InnerIterator it(m_boundary, s.Index()); it; ++it, ++sind) {
             //Assume that the center is circumcenter, which helps build whitney forms
             auto&& sm1 = SCm1::simplexByIndex(it.row());
             //compute the dimension that is missing
 
+            centers.col(sind) = sm1.Center();
             //basis vector measured from center to end
-            basis.col(sind) = (//TraitsContainer<0>::complextype::m_vertices[s.oppositeIndex(sm1)]
+            basis.col(sind) = (
                                s.Center()-sm1.Center()).normalized();
+            basis.col(sind) /= basis.col(sind).dot(TraitsContainer<0>::complextype::m_vertices[s.oppositeIndex(sm1)] - sm1.Center());
         }
-        return basis;
-    });
+    }
 }
 template <typename NT, typename DT>
 auto SimplicialComplexPrivate<NT,DT>::barycentricCoords(const NSimplex & s, const Vector & v) const -> BarycentricCoordinates
 {
-    BarycentricCoordinates coeffs;
+    //BarycentricCoordinates coeffs;
+    auto&& basis = m_whitneyBases[s.Index()];
+    auto&& centers = m_whitneyCenters[s.Index()];
+    WhitneyBasis m = v.rowwise().replicate(centers.cols()) - centers;
+    return m.cwiseProduct(basis).colwise().sum().transpose();
+
+
     /*
     int sind=0;
         WhitneyBasis m = verticesBySimplex(s) - v.rowwise().replicate(m.cols());
@@ -675,7 +683,7 @@ auto SimplicialComplexPrivate<NT,DT>::barycentricCoords(const NSimplex & s, cons
         coeffs(sind) = m_whitneyBases[s.Index()].col(sind).dot(v - SCm1::simplexByIndex(it.row()).Center());
     }
     */
-    return coeffs;
+    //return coeffs;
 }
 
 
@@ -827,6 +835,11 @@ public:
     }
     template <int M=Dim>
     auto whitneyBasis(const typename TraitsContainer<M>::simplextype & simplex) const
+    -> decltype(TraitsContainer<M>::complextype::m_whitneyBases[simplex.Index()]) {
+        return TraitsContainer<M>::complextype::m_whitneyBases[simplex.Index()];
+    }
+    template <int M=Dim>
+    auto whitneyCenters(const typename TraitsContainer<M>::simplextype & simplex) const
     -> decltype(TraitsContainer<M>::complextype::m_whitneyBases[simplex.Index()]) {
         return TraitsContainer<M>::complextype::m_whitneyBases[simplex.Index()];
     }

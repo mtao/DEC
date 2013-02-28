@@ -302,6 +302,26 @@ void GLWidget::paintGL() {
         glDrawArrays(GL_POINTS, 0, m_particlevbo->size);
         m_particleshader->release();
     }
+
+    if(do_vel) {
+        glMatrixMode(GL_PROJECTION);
+        glLoadMatrixf((const GLfloat*)&mat_p[0]);
+        glMatrixMode(GL_MODELVIEW);
+        glLoadMatrixf((const GLfloat*)&mat_mv[0]);
+        glBegin(GL_LINES);
+        for(int i=0; i < velocitytuples.size()/2; ++i) {
+            glColor3f(1,1,1);
+            glVertex3f(
+                        velocitytuples[2*i](0),
+                        velocitytuples[2*i](1),
+                        velocitytuples[2*i](2));
+            glVertex3f(
+                        velocitytuples[2*i+1](0),
+                        velocitytuples[2*i+1](1),
+                        velocitytuples[2*i+1](2));
+        }
+        glEnd();
+    }
 }
 
 std::unique_ptr<ShaderProgram> & GLWidget::shaderSelector(RenderType type) {

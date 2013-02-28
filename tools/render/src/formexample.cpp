@@ -69,6 +69,27 @@ void ExampleWidget::openFile(const QString & filename) {
         p.project();
     }
     */
+    //std::vector<Vector> vfield = m_dec->velocityField(p1form);
+    std::vector<Vector> vfield;
+    vfield.reserve(6*m_mesh->simplices().size());
+    for(int i=0; i < m_mesh->simplices().size(); ++i) {
+        auto&& basis = m_mesh->whitneyBasis(m_mesh->simplex(i));
+        auto&& center = m_mesh->whitneyCenters(m_mesh->simplex(i));
+        std::cout << center << std::endl;
+        for(int j=0; j < basis.cols(); ++j) {
+        vfield.push_back(mtao::normalizeToBBox(Vector(center.col(i)),m_bbox));
+        vfield.push_back(mtao::normalizeToBBox(Vector(center.col(i)+basis.col(i)),m_bbox));
+        }
+    }
+    m_glwidget->getVels(vfield);
+    /*
+    std::vector<Vector> velocitylines(2*vfield.size());
+    for(int i=0; i < velocitylines.size()/2; ++i) {
+        velocitylines[2*i] = mtao::normalizeToBBox(m_mesh->simplex(i).Center(),m_bbox);
+        velocitylines[2*i+1] = velocitylines[2*i]+.01*vfield[i];
+    }
+    m_glwidget->getVels(velocitylines);
+    */
     std::vector<Particle<DECType > > particles(m_mesh->numSimplices(), Particle<DECType >(*m_dec, Vector::Random()));
     std::transform(m_mesh->simplices().begin(), m_mesh->simplices().end(), particles.begin(), [&] (const decltype(m_mesh->simplices()[0]) & s)
             -> Particle<DECType > {

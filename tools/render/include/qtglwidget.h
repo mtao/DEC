@@ -18,6 +18,12 @@ class GLWidget: public QGLWidget
 public:
     friend class MainWindow;
     GLWidget(const QGLFormat&  format, QWidget * parent=0);
+    void getVels(const std::vector<Eigen::Vector3f> & vel) {
+        velocitytuples = vel;
+        do_vel = true;
+    }
+    std::vector<Eigen::Vector3f> velocitytuples;
+    bool do_vel = false;
 protected:
     void paintGL();
     void resizeGL(int w, int h);
