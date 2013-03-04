@@ -1,4 +1,5 @@
 #include "../include/trianglemesh.h"
+#include "../include/advection.hpp"
 #include <cmath>
 auto NormalTriangleMesh::equalNormal() -> std::vector<Vector> {
     std::vector<Vector> normals(vertices().size(), Vector(0,0,0));
@@ -8,7 +9,7 @@ auto NormalTriangleMesh::equalNormal() -> std::vector<Vector> {
     for(auto&& s: simplices<2>()) {
         for(int i=0; i < 3; ++i)
         {
-        normals[s[i]] +=  m_face_normals[s.Index()];
+            normals[s[i]] +=  m_face_normals[s.Index()];
         }
     }
     for(auto&& n: normals) {
@@ -22,7 +23,7 @@ auto NormalTriangleMesh:: areaNormal() -> std::vector<Vector> {
     for(auto&& s: simplices<2>()) {
         for(int i=0; i < 3; ++i)
         {
-        normals[s[i]] += s.Volume() * m_face_normals[s.Index()];
+            normals[s[i]] += s.Volume() * m_face_normals[s.Index()];
         }
     }
     for(auto&& n: normals) {
@@ -42,7 +43,7 @@ auto NormalTriangleMesh:: angleNormal() -> std::vector<Vector> {
             auto&& left = (vertex(s[other[0]]) - origin).normalized();
             auto&& right = (vertex(s[other[1]]) - origin).normalized();
             Scalar factor = std::acos((left.dot(right)));
-        normals[s[i]] += factor * m_face_normals[s.Index()];
+            normals[s[i]] += factor * m_face_normals[s.Index()];
         }
     }
     for(auto&& n: normals) {
@@ -89,7 +90,43 @@ void NormalTriangleMesh::computeNormals() {
         mat.leftCols(2) = mat.leftCols(2) - mat.col(2).rowwise().replicate(2);
         m_face_normals[s.Index()] =
                 (
-                (s.isNegative()?-1:1) *
-                 mat.col(0).cross(mat.col(1)).normalized());
+                    (s.isNegative()?-1:1) *
+                    mat.col(0).cross(mat.col(1)).normalized());
+    }
+}
+
+
+
+
+void NormalTriangleMesh::semilagrangianAdvection(VelocityFormType & form, Scalar dt){
+    VelocityFormType oldform = form;
+    std::cout << oldform.expr.rows() << " " << form.expr.rows() << std::endl;
+
+    for(auto&& s2: constSimplices<2>()) {
+        typename SparseMatrix::InnerIterator it2(b(), s2.Index());
+        int col = 0;
+        if(it2.value() * form(it2.row()) < 0 ) {//==1 => inward vector, which we dont want because we're back advecting
+            ++it2;
+            col = 1;
+        }
+        if(it2) {
+            auto&& s1 = simplex<1>(it2.row());
+            Particle<NormalTriangleMesh> p(*this,s1.Center(), &s2);
+            p.advectInPlace(oldform,-dt);
+            Vector newvel = getVelocity(p.p(),s2,oldform);
+            form.expr(it2.row()) = it2.value() * newvel.dot(whitneyBasis(s2).col(col));
+        } else {
+            std::cout << "WTF i just intersected with a boundary" << std::endl;
+        }
+
+
+    }
+    std::cout << (form - oldform).expr.norm() << std::endl;
+}
+
+void NormalTriangleMesh::advect(VelocityFormType & form, Scalar dt, AdvectionType type){
+    switch(type) {
+    case Semilagrangian_Advection:
+        semilagrangianAdvection(form,dt);
     }
 }

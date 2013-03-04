@@ -294,6 +294,7 @@ void GLWidget::paintGL() {
         m_shader->release();
     }
     if(m_particlevbo) {
+        glPointSize(5);
         m_particleshader->bind(false);
         glUniformMatrix4fv(glGetUniformLocation(m_particleshader->programId, "MVP"),
                            1, GL_FALSE, glm::value_ptr(mat_mvp));
@@ -301,6 +302,7 @@ void GLWidget::paintGL() {
         m_particlevbo->bind(vertexAttribId);
         glDrawArrays(GL_POINTS, 0, m_particlevbo->size);
         m_particleshader->release();
+        glPointSize(1);
     }
 
     if(do_vel) {
@@ -309,12 +311,14 @@ void GLWidget::paintGL() {
         glMatrixMode(GL_MODELVIEW);
         glLoadMatrixf((const GLfloat*)&mat_mv[0]);
         glBegin(GL_LINES);
+        //glBegin(GL_POINTS);
         for(int i=0; i < velocitytuples.size()/2; ++i) {
-            glColor3f(1,1,1);
+            glColor3f(0,0,0);
             glVertex3f(
                         velocitytuples[2*i](0),
                         velocitytuples[2*i](1),
                         velocitytuples[2*i](2));
+            glColor3f(1,1,1);
             glVertex3f(
                         velocitytuples[2*i+1](0),
                         velocitytuples[2*i+1](1),
@@ -461,6 +465,7 @@ void GLWidget::clearForms() {
 }
 void GLWidget::unloadMesh() {
     m_meshpackage.reset();
+    m_meshbuffers = MeshBuffers();
 }
 bool operator<(const FormPackage & a, const FormPackage & b) {
     return a.title < b.title;

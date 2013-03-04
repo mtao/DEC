@@ -28,6 +28,7 @@ private:
     decltype(m_dec->template genForm<DUAL_FORM  ,0>()) d0form;
     decltype(m_dec->template genForm<DUAL_FORM  ,1>()) d1form;
     decltype(m_dec->template genForm<DUAL_FORM  ,2>()) d2form;
+    std::unique_ptr<std::vector<Particle<DECType> > > particles;
 };
 #include <iostream>
 ExampleWidget::ExampleWidget(QWidget * parent): MainWindow(parent){
@@ -69,37 +70,35 @@ void ExampleWidget::openFile(const QString & filename) {
         p.project();
     }
     */
-    //std::vector<Vector> vfield = m_dec->velocityField(p1form);
+    /*
     std::vector<Vector> vfield;
     vfield.reserve(6*m_mesh->simplices().size());
     for(int i=0; i < m_mesh->simplices().size(); ++i) {
         auto&& basis = m_mesh->whitneyBasis(m_mesh->simplex(i));
         auto&& center = m_mesh->whitneyCenters(m_mesh->simplex(i));
-        std::cout << center << std::endl;
-        for(int j=0; j < basis.cols(); ++j) {
-        vfield.push_back(mtao::normalizeToBBox(Vector(center.col(i)),m_bbox));
-        vfield.push_back(mtao::normalizeToBBox(Vector(center.col(i)+basis.col(i)),m_bbox));
+        //std::cout << center << std::endl;
+        //std::cout << basis << std::endl;
+        for(int j=0; j < center.cols(); ++j) {
+        vfield.push_back(mtao::normalizeToBBox(Vector(center.col(j)),m_bbox));
+        vfield.push_back(mtao::normalizeToBBox(Vector(center.col(j)+.6*basis.col(j)),m_bbox));
         }
     }
-    m_glwidget->getVels(vfield);
-    /*
-    std::vector<Vector> velocitylines(2*vfield.size());
-    for(int i=0; i < velocitylines.size()/2; ++i) {
-        velocitylines[2*i] = mtao::normalizeToBBox(m_mesh->simplex(i).Center(),m_bbox);
-        velocitylines[2*i+1] = velocitylines[2*i]+.01*vfield[i];
-    }
-    m_glwidget->getVels(velocitylines);
     */
-    std::vector<Particle<DECType > > particles(m_mesh->numSimplices(), Particle<DECType >(*m_dec, Vector::Random()));
-    std::transform(m_mesh->simplices().begin(), m_mesh->simplices().end(), particles.begin(), [&] (const decltype(m_mesh->simplices()[0]) & s)
+
+
+
+    particles.reset(new std::vector<Particle<DECType > >(m_mesh->numSimplices(), Particle<DECType >(*m_dec, Vector::Random())));
+    particles.reset(new std::vector<Particle<DECType > >(1, Particle<DECType >(*m_dec, Vector::Random())));
+    std::transform(m_mesh->simplices().begin()+10, m_mesh->simplices().begin()+11/*end()*/, particles->begin(), [&] (const decltype(m_mesh->simplices()[0]) & s)
             -> Particle<DECType > {
-        return Particle<DECType >(*m_dec, s.Center());
+        return Particle<DECType >(*m_dec, s.Center(),&s);
     });
-    std::vector<Vector> ps(particles.size());
+    std::vector<Vector> ps(particles->size());
     for(int i=0; i < ps.size(); ++i) {
-        ps[i] = mtao::normalizeToBBox(particles[i].p(),m_bbox);
+        ps[i] = mtao::normalizeToBBox((*particles)[i].p(),m_bbox);
     }
     emit particlesLoaded(std::make_shared<VertexBufferObject>((void*)ps.data(),ps.size(),GL_STATIC_DRAW,3));
+    std::cout << "Done with formexample loading" << std::endl;
 }
 
 void ExampleWidget::keyPressEvent(QKeyEvent * event) {
@@ -115,11 +114,11 @@ void ExampleWidget::keyPressEvent(QKeyEvent * event) {
 
 #include <iostream>
 void ExampleWidget::solveThings() {
-    static std::default_random_engine generator;
-    std::uniform_int_distribution<int> rand;
-    p1form.expr = decltype(p2form.expr)::Zero(p1form.expr.rows());
-    rand = std::uniform_int_distribution<int>(0,p1form.expr.rows()-1);
-    p1form.expr(rand(generator)) = 1;
+    //static std::default_random_engine generator;
+    //std::uniform_int_distribution<int> rand;
+    //p1form.expr = decltype(p2form.expr)::Zero(p1form.expr.rows());
+    //rand = std::uniform_int_distribution<int>(0,p1form.expr.rows()-1);
+    //p1form.expr(rand(generator)) = 1;
     emit formLoaded(makeFormPackage("initialVelocity", p1form));
 
     p2form = m_dec->d(p1form);
@@ -128,7 +127,7 @@ void ExampleWidget::solveThings() {
     Eigen::SparseMatrix<float> dhdh = m_dec->d(m_dec->h(m_dec->d(m_dec->template h<2>()))).expr.eval();
 
     typename Eigen::ConjugateGradient<decltype(dhdh), Eigen::Lower, typename Eigen::SimplicialLDLT<decltype(dhdh)> > chol;
-    chol.setMaxIterations(dhdh.rows()/5);
+    chol.setMaxIterations(dhdh.rows()/3);
     chol.setTolerance(0.001);
     //typename Eigen::ConjugateGradient<decltype(dhdh), Eigen::Lower, typename Eigen::CholmodBaseSupernodalLLT<decltype(dhdh)> > chol;
     chol.compute(dhdh);
@@ -142,10 +141,31 @@ void ExampleWidget::solveThings() {
         std::cout << "Failed at solving" << std::endl;
     }
     p2form.expr = ret / ret.lpNorm<Eigen::Infinity>();
+    p2form.expr = ret;// / ret.lpNorm<Eigen::Infinity>();
     emit formLoaded(makeFormPackage("pressure", p2form));
-    p1form.expr = m_dec->d(m_dec->h(p2form)).expr;
+    p2form.expr = ret;// / ret.lpNorm<Eigen::Infinity>();
+    p1form.expr -= m_dec->d(m_dec->h(p2form)).expr;
+    //m_mesh->advect(p1form,.02);
     p1form.expr /= p1form.expr.lpNorm<Eigen::Infinity>()*.2;
     emit formLoaded(makeFormPackage("projected velocity", p1form));
+    std::vector<Vector> vfield = m_dec->velocityField(p1form);
+    //for(auto&& s: vfield) std::cout << "-> "<< s.transpose() << std::endl;
+    m_glwidget->getVels(vfield);
+
+    std::vector<Vector> velocitylines(2*vfield.size());
+    for(int i=0; i < velocitylines.size()/2; ++i) {
+        velocitylines[2*i] = mtao::normalizeToBBox(m_mesh->simplex(i).Center(),m_bbox);
+        velocitylines[2*i+1] = velocitylines[2*i]+vfield[i];
+    }
+    m_glwidget->getVels(velocitylines);
+
+    std::vector<Vector> ps(particles->size());
+    for(int i=0; i < ps.size(); ++i) {
+        (*particles)[i].advectInPlace(p1form,0.02);
+        ps[i] = mtao::normalizeToBBox((*particles)[i].p(),m_bbox);
+    }
+    emit particlesLoaded(std::make_shared<VertexBufferObject>((void*)ps.data(),ps.size(),GL_STATIC_DRAW,3));
+    emit formLoaded(makeFormPackage("active", (*particles)[0].activeSimplex()));
 
 }
 

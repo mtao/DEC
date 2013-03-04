@@ -17,11 +17,6 @@
 
 namespace mtao_internal
 {
-constexpr int cefactorial(int n)
-{
-    return n > 0 ? n * cefactorial(n-1):1;
-}
-
 /*! A 0-simplicial complex only manages
 * the vertices and some trivalish set of simplices.  vertices without any higher order
 * information are considered bad data and though stored here, they do not have simplices
@@ -39,6 +34,7 @@ protected:
     typedef NT NumTraits;
     static const int Dim = 0;
     static const int TopDim = DT::Top;
+    typedef DT DimTraits;
     static const int EmbeddedDim = NT::Dim;
     typedef typename NumTraits::Vector Vector;
     typedef typename NumTraits::Scalar Scalar;
@@ -114,6 +110,7 @@ protected:
 
     /*! Compute the volume of the dual polytope by adding the volume of the disjoint components of the dual polytope that are passed down from above*/
     void genDualVolume(NSimplex & s, std::vector<Vector> & clist);
+    void genDualVolume(NSimplex & s, std::array<Vector,DimTraits::Top+1> & clist);
 
     /*! The center of a 0 form is its vertex*/
     void computeCircumcenter(NSimplex & s) {s.center = m_vertices[s[0]];}
@@ -168,16 +165,15 @@ template <typename NT, typename DT> auto SimplicialComplexPrivateBase<NT,DT>
 
 
 template <typename NT, typename DT> auto SimplicialComplexPrivateBase<NT,DT>
-::genDualVolume(NSimplex & s, std::vector<Vector> & clist) -> void {
+::genDualVolume(NSimplex & s, std::array<Vector,DimTraits::Top+1> & clist) -> void {
     clist[0] = s.center;
-    int M = EmbeddedDim;
-    typename NumTraits::DynamicMatrix m(M,clist.size()-1);
+    Eigen::Matrix<Scalar,EmbeddedDim,DimTraits::Top> m;
     auto&& origin = clist.back();
-    for(int i=0; i < static_cast<int>(clist.size())-1; ++i)
+    for(int i=0; i < DimTraits::Top; ++i)
     {
         m.col(i) = this->m_vertices[i] - origin;
     }
-    s.dualVolume += std::sqrt((m.transpose()*m).determinant())/cefactorial(TopDim-1);
+    s.dualVolume += mtao::volume(m);
 }
 
 
@@ -234,10 +230,10 @@ public:
         typedef Simplex<NT,dimtype> simplextype;
     };
     typedef NT NumTraits;
-    typedef DT dimensional_traits;
-    static const int Dim = dimensional_traits::Dim;
-    static const int N = dimensional_traits::Dim;
-    static const int TopDim = dimensional_traits::Top;
+    typedef DT DimTraits;
+    static const int Dim = DimTraits::Dim;
+    static const int N = DimTraits::Dim;
+    static const int TopDim = DimTraits::Top;
     static const int EmbeddedDim = NT::Dim;
     typedef typename NumTraits::Vector Vector;
     typedef typename NumTraits::Scalar Scalar;
@@ -289,13 +285,12 @@ protected:
     Eigen::Matrix<Scalar,EmbeddedDim,N> simplexToBaryMatrix(const NSimplex & s) const;
     void computeCircumcenter(NSimplex & s);
     //template <bool Signed = (N == EmbeddedDim)> void computeVolume(NSimplex & s);
-    void genDualVolume(NSimplex & s, std::vector<Vector> & clist);
+    void genDualVolume(NSimplex & s, std::array<Vector,DimTraits::Top+1> & clist);
 
     template <bool Signed = (N == EmbeddedDim)>
     void computeVolume(NSimplex & s) {
         auto&& m = simplexToBaryMatrix(s);
-        if(Signed) {s.volume = m.determinant()/cefactorial(N);}
-        else {s.volume = std::sqrt((m.transpose()*m).determinant())/cefactorial(N);}
+        s.volume = mtao::volume(m);
     }
 
     //====================================================
@@ -429,10 +424,16 @@ void SimplicialComplexPrivate<NT,DT>::init()
     //This depends on having the boundary structure, but should be run
     //top down and only once due to the maintenance of circumcenter list
     //so it doesn't fit in head-recursive finalize
-    std::vector<Vector> clist(N+1,Vector::Zero());
+    //std::vector<Vector> clist(N+1,Vector::Zero());
+    std::array<Vector,DimTraits::Top+1> clist;
     for(auto&& s: m_simplices)
     {
-        genDualVolume(s, clist);
+        clist.back() = s.Center();
+        s.dualVolume = 1;
+        for(typename decltype(m_boundary)::InnerIterator it(m_boundary, s.Index()); it; ++it) {
+            SCm1::genDualVolume(SCm1::simplexByIndex(it.row()), clist);
+        }
+        //genDualVolume(s, clist);
     }
     //Extraneous computation to let the DEC side zero things out easier
     SparseMatrixColMajor B = m_boundary.transpose();//make it so the innervectors are the top simplices
@@ -546,20 +547,14 @@ template <typename NT, typename DT> auto SimplicialComplexPrivate<NT,DT>
 }
 
 template <typename NT, typename DT> auto SimplicialComplexPrivate<NT,DT>
-::genDualVolume(NSimplex & s, std::vector<Vector> & clist) -> void
+::genDualVolume(NSimplex & s, std::array<Vector,DimTraits::Top+1> & clist) -> void
 {
     clist[N] = s.center;
-
-    if(N == clist.size()-1) {
-        s.dualVolume = 1;
-    } else {
-        int M = EmbeddedDim;
-        typename NumTraits::DynamicMatrix m(M,clist.size()-N-1);
-        auto&& origin = clist.back();
-        for(int i=N; i < static_cast<int>(clist.size())-1; ++i) {
-            m.col(i-N) = clist[i] - origin;
-        }
-        s.dualVolume += std::sqrt((m.transpose()*m).determinant())/cefactorial(TopDim - N);
+    Eigen::Matrix<Scalar,EmbeddedDim,DimTraits::Top-N> m;
+    auto&& origin = clist.back();
+    for(int i=N; i < DimTraits::Top; ++i) {
+        m.col(i-N) = clist[i] - origin;
+        s.dualVolume += mtao::volume(m);
     }
     for(typename decltype(m_boundary)::InnerIterator it(m_boundary, s.Index()); it; ++it) {
         SCm1::genDualVolume(SCm1::simplexByIndex(it.row()), clist);
@@ -647,21 +642,26 @@ void SimplicialComplexPrivate<NT,DT>::genWhitneyBases()
 {
     m_whitneyBases.resize(m_simplices.size());
     m_whitneyCenters.resize(m_simplices.size());
+    //std::cout << "DIM: " << Dim << std::endl;
     for(auto&& s: m_simplices) {
         auto&& basis = m_whitneyBases[s.Index()];
         auto&& centers = m_whitneyCenters[s.Index()];
         int sind=0;
+        //std::cout << "======" << s.Volume() << std::endl;
         for(typename decltype(m_boundary)::InnerIterator it(m_boundary, s.Index()); it; ++it, ++sind) {
             //Assume that the center is circumcenter, which helps build whitney forms
             auto&& sm1 = SCm1::simplexByIndex(it.row());
             //compute the dimension that is missing
 
             centers.col(sind) = sm1.Center();
+            //std::cout << s.Index() << ": " << sind << ") " << centers.col(sind).transpose() << std::endl;//sm1.Center().transpose() << std::endl;
             //basis vector measured from center to end
             basis.col(sind) = (
-                               s.Center()-sm1.Center()).normalized();
-            basis.col(sind) /= basis.col(sind).dot(TraitsContainer<0>::complextype::m_vertices[s.oppositeIndex(sm1)] - sm1.Center());
+                        s.Center()-sm1.Center()).normalized();
+            basis.col(sind) *= (N-1)*s.Volume() / sm1.Volume();//need to doublecheck that its n-1
         }
+        //std::cout << "vvvvvvv\n";
+        //std::cout << m_whitneyBases[s.Index()] << std::endl;
     }
 }
 template <typename NT, typename DT>
@@ -672,6 +672,8 @@ auto SimplicialComplexPrivate<NT,DT>::barycentricCoords(const NSimplex & s, cons
     auto&& centers = m_whitneyCenters[s.Index()];
     WhitneyBasis m = v.rowwise().replicate(centers.cols()) - centers;
     return m.cwiseProduct(basis).colwise().sum().transpose();
+
+    // Eigen::Matrix<Scalar,Dim,EmbeddedDim>
 
 
     /*
@@ -840,8 +842,8 @@ public:
     }
     template <int M=Dim>
     auto whitneyCenters(const typename TraitsContainer<M>::simplextype & simplex) const
-    -> decltype(TraitsContainer<M>::complextype::m_whitneyBases[simplex.Index()]) {
-        return TraitsContainer<M>::complextype::m_whitneyBases[simplex.Index()];
+    -> decltype(TraitsContainer<M>::complextype::m_whitneyCenters[simplex.Index()]) {
+        return TraitsContainer<M>::complextype::m_whitneyCenters[simplex.Index()];
     }
     template <int M=Dim>
     auto barycentricCoords(const typename TraitsContainer<M>::simplextype & s, const Vector & v) const

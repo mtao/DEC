@@ -50,7 +50,9 @@ public:
         assert(expr.size() == other.size());
         expr = other;
     }
-    Form(const MyType & other): Parent(expr)/*, expr(other.constData())*/ {}
+    Form(const MyType & other): Parent(expr)/*, expr(other.constData())*/ {
+        this->expr = other.expr;
+    }
     template <typename Traits1, typename Expr2>
     Form(FormExpression<Traits1,Expr2> const & rhs): Parent(rhs.expr)//, expr(rhs.expr)
     {
@@ -116,7 +118,7 @@ protected:
 
 public:
     template <FormType Type = PRIMAL_FORM, int N = Complex::Dim>
-    Form<DimTraits::Dim, typename Complex::NumTraits::DynamicVector,Type,N> genForm()
+    Form<DimTraits::Dim, typename Complex::NumTraits::DynamicVector,Type,N> genForm() const
     {
         static_assert(N <= Complex::Dim,"Form can't be of higher dim than top dim of simplicial complex");
         return Form<Complex::Dim,typename Complex::NumTraits::DynamicVector,Type,N>(
@@ -362,6 +364,16 @@ public:
     const Complex & complex() const {return m_sc;}
     //====================================================
     //====================================================
+    //==               Form Generation                  ==
+    //====================================================
+    //====================================================
+    template <FormType Type=PRIMAL_FORM, int M=0>
+    typename DECTraits::template form<Type,M>::type genForm() const {
+        return FF::template genForm<Type,M>();
+    }
+
+    //====================================================
+    //====================================================
     //==            Interpolation                       ==
     //====================================================
     //====================================================
@@ -371,22 +383,22 @@ public:
     typedef typename Complex::SCTraits::template internal_complex<Dim>::type::WhitneyBasis VelocityBasis;
     typedef typename Complex::SCTraits::template internal_complex<Dim>::type::WhitneyCoefficients VelocityCoefficients;
     typedef typename Complex::Vector Vector;
-    void getVelocityInPlace(const Vector & p, const typename Complex::template TraitsContainer<Dim>::simplextype & simplex, const Nm1Form & form, Vector & v) {
+    void getVelocityInPlace(const Vector & p, const typename Complex::template TraitsContainer<Dim>::simplextype & simplex, const Nm1Form & form, Vector & v) const{
         VelocityCoefficients coeffs;
         auto&& b = m_sc.template b<Dim>();
         auto&& basis = m_sc.whitneyBasis(simplex);
-        //auto&& centers = m_sc.whitneyCenters(simplex);
+        auto&& centers = m_sc.whitneyCenters(simplex);
         int i=0;
         for(typename SparseMatrixColMajor::InnerIterator it(b,simplex.Index()); it; ++it, ++i) {
             auto&& lower = m_sc.template simplex<Dim-1>(it.row());
-            coeffs(i) = (simplex.isSameSign(lower)?1:-1) * form(simplex[i])
-                    * basis.col(i).dot(p-lower.Center());
-            std::cout << "[" << form(simplex[i]) << "] " << basis.col(i).transpose() << " [" << (p-lower.Center()).transpose() << "]" << coeffs(i) << std::endl;
+            coeffs(i) =
+                    it.value() *
+                    form(lower.Index())
+                    * basis.col(i).dot(p-centers.col(i))/basis.col(i).squaredNorm();
         }
         v = m_sc.whitneyBasis(simplex) * coeffs;
-        std::cout << "Result: " <<v.transpose() << std::endl;
     }
-    Vector getVelocity(const Vector & p, const typename Complex::template TraitsContainer<Dim>::simplextype & simplex, const Nm1Form & form) {
+    Vector getVelocity(const Vector & p, const typename Complex::template TraitsContainer<Dim>::simplextype & simplex, const Nm1Form & form) const{
         Vector v;
         getVelocityInPlace(p,simplex,form,v);
         return v;
@@ -399,27 +411,6 @@ public:
         }
         return vfield;
     }
-    /*
-    affineInPlace(const NSimplex & s, const Vector & v, std::array<T, N+1> & res) {
-        std::array<Scalar, N+1> coords = barycentricCoords(s,v);
-        T ret;
-        ret = ret * 0;//TODO: find a better way to zero things out...
-        for(int i=0; i < N+1; ++i) {
-            res +=
-        }
-
-
-
-
-    }
-    template <typename T>
-    T affine(const NSimplex & s, const Vector & v) {
-        T t;
-        affineInPlace(s,v,t);
-        return t;
-    }
-    */
-
 
 
 private:

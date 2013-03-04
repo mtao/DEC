@@ -8,12 +8,16 @@ class NormalTriangleMesh: public TriangleMeshf, public DEC<TriangleMeshf>
 {
 public:
     enum NormalType {Equal_Normal, Area_Normal, Angle_Normal, Mean_Curvature_Normal, Sphere_Normal};
+    enum AdvectionType {Semilagrangian_Advection};
     typedef TriangleMeshf SCParent;
     typedef DEC<TriangleMeshf> DECParent;
     typedef SCParent::NumTraits NumTraits;
     typedef SCParent::DimTraits DimTraits;
+    typedef typename DECParent::Nm1Form VelocityFormType;
     using SCParent::Dim;
     typedef SCParent::Vector Vector;
+    typedef SCParent::Scalar Scalar;
+    typedef SCParent::SparseMatrixColMajor SparseMatrixColMajor;
     NormalTriangleMesh()
         : DECParent(*dynamic_cast<SCParent*>(this))
     {}
@@ -38,6 +42,7 @@ public:
     ~NormalTriangleMesh() {
     }
     std::vector<Vector> getNormals(NormalType type = Equal_Normal);
+    void advect(VelocityFormType & form, Scalar dt, AdvectionType type = Semilagrangian_Advection);
 protected:
     std::vector<Vector> m_face_normals;
 
@@ -46,6 +51,7 @@ protected:
     std::vector<Vector> angleNormal();
     std::vector<Vector> meanCurvatureNormal();
     std::vector<Vector> sphereNormal();
+    void semilagrangianAdvection(VelocityFormType & form, Scalar dt);
     void init();
     void computeNormals();
 

@@ -6,6 +6,11 @@
 #include <Eigen/Geometry>
 namespace mtao{
 
+constexpr int cefactorial(int n)
+{
+    return n > 0 ? n * cefactorial(n-1):1;
+}
+
 template <typename Vector>
 void getBoundingBoxInPlace(const std::vector<Vector> & vertices, Eigen::AlignedBox<typename Vector::Scalar,Vector::RowsAtCompileTime> & bbox)  {
     typedef typename Vector::Scalar Scalar;
@@ -40,7 +45,7 @@ void normalizeToBBoxInPlace(Vector & v, const Eigen::AlignedBox<typename Vector:
     typedef typename Vector::Scalar Scalar;
     Vector mid = bbox.center();
     Scalar range = (bbox.max()-bbox.min()).maxCoeff();
-        v.noalias() = (v-mid)/range;
+    v.noalias() = (v-mid)/range;
 }
 
 
@@ -50,7 +55,7 @@ void unnormalizeToBBoxInPlace(Vector & v, const Eigen::AlignedBox<typename Vecto
     typedef typename Vector::Scalar Scalar;
     Vector mid = bbox.center();
     Scalar range = (bbox.max()-bbox.min()).maxCoeff();
-        v.noalias() = (v+mid)*range;
+    v.noalias() = (v+mid)*range;
 }
 
 
@@ -92,8 +97,34 @@ std::vector<Vector> normalize(const std::vector<Vector> & vertices) {
 
 
 
+/*
+template <typename Scalar, bool Signed>
+Scalar volume(const Eigen::Matrix<Scalar,Eigen::Dynamic,Eigen::Dynamic> & m) {
+    if(Signed) {
+        return m.determinant()/cefactorial(Dim);
+    } else {
+        return std::sqrt((m.transpose()*m).determinant())/cefactorial(Dim);
+    }
+}
+*/
 
+template <typename Scalar,int EmbeddedDim, int Dim>
+Scalar signedVolume(const Eigen::Matrix<Scalar,EmbeddedDim,Dim> & m) {
+    return m.determinant()/cefactorial(Dim);
+}
 
+template <typename Scalar,int EmbeddedDim, int Dim>
+Scalar unsignedVolume(const Eigen::Matrix<Scalar,EmbeddedDim,Dim> & m) {
+    return std::sqrt((m.transpose()*m).determinant())/cefactorial(Dim);
+}
+template <typename Scalar,int EmbeddedDim, int Dim, bool Signed = true>
+Scalar volume(const Eigen::Matrix<Scalar,EmbeddedDim,Dim> & m) {
+    if(Dim == EmbeddedDim && Signed) {
+        return signedVolume(m);
+    } else {
+        return unsignedVolume(m);
+    }
+}
 
 
 
@@ -147,8 +178,8 @@ auto constNormal(const Matrix & mat) -> Eigen::Matrix<typename Matrix::Scalar, M
     typedef Eigen::Matrix<typename Matrix::Scalar, Matrix::RowsAtCompileTime, 1> Vector;
     typedef typename Vector::Scalar Scalar;
 
-        Eigen::Matrix<Scalar, Matrix::RowsAtCompileTime, Matrix::ColsAtCompileTime> basis(mat);
-        return normal(basis);
+    Eigen::Matrix<Scalar, Matrix::RowsAtCompileTime, Matrix::ColsAtCompileTime> basis(mat);
+    return normal(basis);
 
 
 }

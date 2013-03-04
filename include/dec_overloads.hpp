@@ -75,6 +75,20 @@ decltype(
                 )> {a.expr+b.expr};
 }
 template <typename Traits1, typename Traits2,typename Expr1, typename Expr2>
+auto operator-(const mtao_internal::FormExpression<Traits1,Expr1> & a, const mtao_internal::FormExpression<Traits2,Expr2> & b)
+->
+const mtao_internal::FormExpression<typename mtao_internal::deduceFormAdditionTraits<Traits1,Traits2>::type,
+decltype(
+        std::declval<Expr1>()-std::declval<Expr2>()
+        )>
+{
+    return
+            mtao_internal::FormExpression<typename mtao_internal::deduceFormAdditionTraits<Traits1,Traits2>::type,
+            decltype(
+                std::declval<Expr1>()-std::declval<Expr2>()
+                )> {a.expr-b.expr};
+}
+template <typename Traits1, typename Traits2,typename Expr1, typename Expr2>
 auto operator*(const mtao_internal::FormExpression<Traits1,Expr1> & a, const mtao_internal::FormExpression<Traits2,Expr2> & b)
 ->
 const mtao_internal::FormExpression<typename mtao_internal::deduceFormCompositionTraits<Traits1,Traits2>::type,
