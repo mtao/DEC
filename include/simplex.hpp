@@ -35,16 +35,14 @@ public:
     Scalar   DualVolume( void )  const  { return dualVolume; }
 
     /*! Returns the index of the vertex opposite the simplex*/
-    /*
     unsigned int oppositeIndex(const Simplex<NT,typename DT::LowerTraits> & below) const {
             for(int i=0; i < Dim; ++i) {
                 if(below[i] != v[i]) {
-                    return below[i];
+                    return v[i];
                 }
             }
             return v[Dim];
     }
-    */
 
     Simplex() {}
     Simplex( const mtao::IndexSet<Dim+1> & _v, bool sort = true )

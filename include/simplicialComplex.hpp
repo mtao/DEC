@@ -317,6 +317,8 @@ protected:
 
     void genWhitneyBases();
     BarycentricCoordinates barycentricCoords(const NSimplex & s, const Vector & v) const;
+    bool inSimplex(const NSimplex & s, const Vector & v) const;
+    void projectToSimplexInPlace(const NSimplex & s, Vector & v) const;
 
     std::vector<NSimplex > m_simplices;
     std::vector<Triplet > m_boundaryTriplets;
@@ -658,7 +660,7 @@ void SimplicialComplexPrivate<NT,DT>::genWhitneyBases()
             //basis vector measured from center to end
             basis.col(sind) = (
                         s.Center()-sm1.Center()).normalized();
-            basis.col(sind) *= (N-1)*s.Volume() / sm1.Volume();//need to doublecheck that its n-1
+            basis.col(sind) *= sm1.Volume() / (N * s.Volume());//need to doublecheck that its n-1
         }
         //std::cout << "vvvvvvv\n";
         //std::cout << m_whitneyBases[s.Index()] << std::endl;
@@ -673,7 +675,7 @@ auto SimplicialComplexPrivate<NT,DT>::barycentricCoords(const NSimplex & s, cons
     WhitneyBasis m = v.rowwise().replicate(centers.cols()) - centers;
     return m.cwiseProduct(basis).colwise().sum().transpose();
 
-    // Eigen::Matrix<Scalar,Dim,EmbeddedDim>
+
 
 
     /*
@@ -688,6 +690,22 @@ auto SimplicialComplexPrivate<NT,DT>::barycentricCoords(const NSimplex & s, cons
     //return coeffs;
 }
 
+template <typename NT, typename DT>
+auto SimplicialComplexPrivate<NT,DT>::inSimplex(const NSimplex & s, const Vector & v) const -> bool
+{
+    return !( this->barycentricCoords(s,v).array() < 0 ).any();
+}
+template <typename NT, typename DT>
+void SimplicialComplexPrivate<NT,DT>::projectToSimplexInPlace(const NSimplex & s, Vector & v) const
+{
+    BarycentricCoordinates bary = barycentricCoords(s,v);
+    v = Vector::Zero();
+    int i = 0;
+    for(typename decltype(m_boundary)::InnerIterator it(m_boundary, s.Index()); it; ++it, ++i) {
+        auto&& sm1 = SCm1::simplexByIndex(it.row());
+        v += SC0::m_vertices[s.oppositeIndex(sm1)] * bary(i);//[i]] * bary(i);
+    }
+}
 
 
 };
@@ -850,7 +868,21 @@ public:
     -> typename TraitsContainer<M>::complextype::BarycentricCoordinates {
         return TraitsContainer<M>::complextype::barycentricCoords(s,v);
     }
+    template <int M=Dim>
+    bool inSimplex(const NSimplex & s, const Vector & v) const {
+        return TraitsContainer<M>::complextype::inSimplex(s,v);
+    }
+    template <int M=Dim>
+    void projectToSimplexInPlace(const NSimplex & s, Vector & v) const {
+        TraitsContainer<M>::complextype::projectToSimplexInPlace(s,v);
+    }
 
+    template <int M=Dim>
+    Vector projectToSimplex(const NSimplex & s, const Vector & v) const {
+        Vector nv = v;
+        TraitsContainer<M>::complextype::projectToSimplexInPlace(s,nv);
+        return nv;
+    }
 
 };
 

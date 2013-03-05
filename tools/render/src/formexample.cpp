@@ -88,8 +88,7 @@ void ExampleWidget::openFile(const QString & filename) {
 
 
     particles.reset(new std::vector<Particle<DECType > >(m_mesh->numSimplices(), Particle<DECType >(*m_dec, Vector::Random())));
-    particles.reset(new std::vector<Particle<DECType > >(1, Particle<DECType >(*m_dec, Vector::Random())));
-    std::transform(m_mesh->simplices().begin()+10, m_mesh->simplices().begin()+11/*end()*/, particles->begin(), [&] (const decltype(m_mesh->simplices()[0]) & s)
+    std::transform(m_mesh->simplices().begin(), m_mesh->simplices().end(), particles->begin(), [&] (const decltype(m_mesh->simplices()[0]) & s)
             -> Particle<DECType > {
         return Particle<DECType >(*m_dec, s.Center(),&s);
     });
@@ -140,13 +139,14 @@ void ExampleWidget::solveThings() {
     {
         std::cout << "Failed at solving" << std::endl;
     }
-    p2form.expr = ret / ret.lpNorm<Eigen::Infinity>();
-    p2form.expr = ret;// / ret.lpNorm<Eigen::Infinity>();
+    p2form.expr = ret;
+    //p2form.expr = ret / ret.lpNorm<Eigen::Infinity>();
+    //p2form.expr = ret;// / ret.lpNorm<Eigen::Infinity>();
     emit formLoaded(makeFormPackage("pressure", p2form));
     p2form.expr = ret;// / ret.lpNorm<Eigen::Infinity>();
     p1form.expr -= m_dec->d(m_dec->h(p2form)).expr;
-    //m_mesh->advect(p1form,.02);
-    p1form.expr /= p1form.expr.lpNorm<Eigen::Infinity>()*.2;
+    m_mesh->advect(p1form,.02);
+    //p1form.expr /= p1form.expr.lpNorm<Eigen::Infinity>();
     emit formLoaded(makeFormPackage("projected velocity", p1form));
     std::vector<Vector> vfield = m_dec->velocityField(p1form);
     //for(auto&& s: vfield) std::cout << "-> "<< s.transpose() << std::endl;
@@ -155,7 +155,7 @@ void ExampleWidget::solveThings() {
     std::vector<Vector> velocitylines(2*vfield.size());
     for(int i=0; i < velocitylines.size()/2; ++i) {
         velocitylines[2*i] = mtao::normalizeToBBox(m_mesh->simplex(i).Center(),m_bbox);
-        velocitylines[2*i+1] = velocitylines[2*i]+vfield[i];
+        velocitylines[2*i+1] = velocitylines[2*i]+.01*vfield[i];
     }
     m_glwidget->getVels(velocitylines);
 
@@ -164,6 +164,11 @@ void ExampleWidget::solveThings() {
         (*particles)[i].advectInPlace(p1form,0.02);
         ps[i] = mtao::normalizeToBBox((*particles)[i].p(),m_bbox);
     }
+    /*
+    ps.push_back (mtao::normalizeToBBox(
+                     Vector((*particles)[0].p() + .1*(*particles)[0].v(p1form))
+                     ,m_bbox));
+                     */
     emit particlesLoaded(std::make_shared<VertexBufferObject>((void*)ps.data(),ps.size(),GL_STATIC_DRAW,3));
     emit formLoaded(makeFormPackage("active", (*particles)[0].activeSimplex()));
 

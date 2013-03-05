@@ -394,7 +394,7 @@ public:
             coeffs(i) =
                     it.value() *
                     form(lower.Index())
-                    * basis.col(i).dot(p-centers.col(i))/basis.col(i).squaredNorm();
+                    * (1-basis.col(i).dot(p-centers.col(i))/basis.col(i).squaredNorm());
         }
         v = m_sc.whitneyBasis(simplex) * coeffs;
     }
