@@ -1,0 +1,21 @@
+
+INCLUDE_DIRECTORIES(
+    ${CMAKE_SOURCE_DIR}/include
+    ./include
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_BINARY_DIR}
+    )
+SET(SPHEREGEN_SOURCES
+    src/main.cpp
+    )
+SET(SPHEREGEN_HEADERS
+    include/sphere.hpp
+    )
+
+
+
+
+
+ADD_EXECUTABLE(sphereGen ${SPHEREGEN_SOURCES} ${SPHEREGEN_HEADERS})
+
+
