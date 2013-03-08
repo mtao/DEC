@@ -2,6 +2,7 @@
 #include "../../../include/util.hpp"
 #include "../../../include/render.hpp"
 #include "../../../include/advection.hpp"
+#include "../../../include/solvers/linear/conjugate_gradient/pcg.hpp"
 #include "../include/qtmainwindow.h"
 #include "../include/packages.h"
 #include <Eigen/SparseCholesky>
@@ -39,10 +40,13 @@ void FluidWidget::openFile(const QString & filename) {
     m_pressure.expr = decltype(m_pressure.expr)::Random(m_pressure.expr.rows());
 
     velocity.expr = decltype(velocity.expr)::Zero(velocity.expr.rows());
-    velocity.expr(5) = 1;
+    velocity.expr(5) = 0.1;
+    /*
     velocity.expr(50) = 1;
     velocity.expr(100) = 1;
     velocity.expr(150) = 1;
+    */
+    velocity.expr /= 1.0;
     //velocity.expr = decltype(velocity.expr)::Random(velocity.expr.rows());
     m_pressure.expr = decltype(m_pressure.expr)::Zero(m_pressure.expr.rows());
     emit formLoaded(makeFormPackage("p1", velocity));
@@ -96,7 +100,7 @@ void FluidWidget::step(float dt) {
     std::vector<Vector> velocitylines(2*vfield.size());
     for(int i=0; i < velocitylines.size()/2; ++i) {
         velocitylines[2*i] = mtao::normalizeToBBox(m_mesh->simplex(i).Center(),m_bbox);
-        velocitylines[2*i+1] = velocitylines[2*i]+.01*vfield[i];
+        velocitylines[2*i+1] = velocitylines[2*i]+.05*vfield[i];
     }
     m_glwidget->getVels(velocitylines);
     /*
@@ -113,28 +117,39 @@ void FluidWidget::step(float dt) {
 void FluidWidget::pressure() {
 
     emit formLoaded(makeFormPackage("rhs", m_pressure));
-    Eigen::SparseMatrix<float> hdh2 = h(d(h<2>())).expr.eval();
-    Eigen::SparseMatrix<float> hd2_ = m_dec->h(m_dec->h(m_dec->template d<2,DUAL_FORM>())).expr.eval();
+    //Eigen::SparseMatrix<float> hdh2 = h(d(h<2>())).expr.eval();
+    //Eigen::SparseMatrix<float> hd2_ = h(d<0,DUAL_FORM>()).expr.eval();
     Eigen::SparseMatrix<float> d1 =m_dec->template d<1>().expr;
-    Eigen::SparseMatrix<float> dhdh2 = d1*hdh2;
+    Eigen::SparseMatrix<float> dhdh2 = m_dec->d(m_dec->h(m_dec->d(m_dec->template h<2>()))).expr;
+    Eigen::SparseMatrix<float> hdh2 = m_dec->h(m_dec->d(m_dec->h<2>())).expr.eval();
+
+    /*
+    Eigen::SparseMatrix<float> dhd2 =(m_dec->d(m_dec->h(m_dec->template d<1,DUAL_FORM>()))).expr;
+    Eigen::SparseMatrix<float> dh2 = ((m_dec->d(m_dec->template h<1,DUAL_FORM>()))).expr;
+    std::cout << dhd2.rows() << dhd2.cols() << std::endl;
+    */
     m_pressure.expr = d1 * velocity.expr;
 
+    Eigen::VectorXf rhs = d1 * velocity.expr;
+    //SparseCholeskyPreconditionedConjugateGradientSolve(dhd2, rhs, m_pressure.expr);
+    SparseCholeskyPreconditionedConjugateGradientSolve(dhdh2, rhs, m_pressure.expr);
+    //typename Eigen::ConjugateGradient<decltype(dhdh2), Eigen::Lower> chol;
     //typename Eigen::ConjugateGradient<decltype(dhdh2), Eigen::Lower, typename Eigen::SimplicialLDLT<decltype(dhdh2)> > chol;
-    typename Eigen::ConjugateGradient<decltype(dhdh2), Eigen::Lower> chol;
-    chol.compute(dhdh2);
-    if(chol.info() != Eigen::Success) std::cout << "Failed at decomposition" << std::endl;
-    Eigen::VectorXf ret = chol.solve(m_pressure.expr);//solve poisson problem
-    if(chol.info() != Eigen::Success) std::cout << "Failed at solving" << std::endl;
-    std::cout << "CG Iterations: " << chol.iterations() << "/" << chol.maxIterations()<< " Error " << chol.error() << "/" << chol.tolerance()<< std::endl;
+    //chol.compute(dhdh2);
+    //if(chol.info() != Eigen::Success) std::cout << "Failed at decomposition" << std::endl;
+    //Eigen::VectorXf ret = chol.solve(m_pressure.expr);//solve poisson problem
+    //if(chol.info() != Eigen::Success) std::cout << "Failed at solving" << std::endl;
+    //std::cout << "CG Iterations: " << chol.iterations() << "/" << chol.maxIterations()<< " Error " << chol.error() << "/" << chol.tolerance()<< std::endl;
 
-    m_pressure.expr = ret;
+    //m_pressure.expr = ret;
     velocity.expr -= hdh2 * m_pressure.expr;
-    std::cout << "Error norm: " << (m_dec->d(velocity) - m_pressure).expr.norm() << "/(" << m_dec->d(velocity).expr.norm()<< ","<< m_pressure.expr.norm() << ")"<< std::endl;
+    //velocity.expr -= dh2 * m_pressure.expr;
+    std::cout << "Error norm: " << (rhs - (dhdh2*m_pressure.expr)).norm() << "/(" << m_dec->d(velocity).expr.norm()<< ","<< m_pressure.expr.norm() << ")"<< std::endl;
     std::cout << "Final energy: " << velocity.expr.norm() << std::endl;
     std::cout << "Final Divergence: " << m_dec->d(velocity).expr.norm() << std::endl;
 
-
-    m_pressure.expr = 1000*ret;
+    //m_pressure.expr = m_dec->h<2,DUAL_FORM>().expr * m_pressure.expr;
+    m_pressure.expr *= 1000;
     emit formLoaded(makeFormPackage("m_pressure", m_pressure));
 
 

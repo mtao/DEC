@@ -21,7 +21,12 @@ class DECTest: public DEC<TriangleMesh>
         std::cout << "Derivatie composition: " << std::endl;
         std::cout << d(d<0>()).constData() << std::endl;
         std::cout << "Laplace downward" << std::endl;
-        std::cout << d(h(d<0>())).constData() << std::endl;
+        std::cout << h(d(h(d<0>()))).constData() << std::endl;
+        std::cout << "Laplace1" << std::endl;
+        std::cout << (h(d(h(d<1>()))) + d(h(d(h<1>())))).constData() << std::endl;
+        std::cout << "Laplace2" << std::endl;
+        std::cout << ((d(h<2>()))).constData() << std::endl;
+        std::cout << d(h(d(h<2>()))).constData() << std::endl;
      auto form = genForm<PRIMAL_FORM,1>();
     auto form2 = genForm<PRIMAL_FORM,1>();
     form2.data().setOnes();

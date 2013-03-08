@@ -170,7 +170,7 @@ public:
 
 
         typedef FormOperator<form_operator_traits<TopDim,PRIMAL_FORM,M,DUAL_FORM,TopDim-M>, DiagonalMatrix> hodge_primal_type;
-        typedef FormOperator<form_operator_traits<TopDim,DUAL_FORM,TopDim-M,PRIMAL_FORM,M>, DiagonalMatrix> hodge_dual_type;
+        typedef FormOperator<form_operator_traits<TopDim,DUAL_FORM,M,PRIMAL_FORM,TopDim-M>, DiagonalMatrix> hodge_dual_type;
 
         template <FormType Type, bool Interior>
         struct d_type{
@@ -187,8 +187,8 @@ public:
     };
     template <int M=TopDim, FormType Form=PRIMAL_FORM>
     struct dec_operator {
-        typedef operator_private<(Form==PRIMAL_FORM)?M:TopDim-M> operator_type;
-        typedef typename operator_private<(Form==PRIMAL_FORM)?M:TopDim-M>::type type;
+        typedef operator_private<M> operator_type;
+        typedef typename operator_private<M>::type type;
         typedef typename std::conditional<(Form==PRIMAL_FORM), typename operator_type::d_primal_type, typename operator_type::d_dual_type>::type d_type;
         typedef typename std::conditional<(Form==PRIMAL_FORM), typename operator_type::hodge_primal_type, typename operator_type::hodge_dual_type>::type h_type;
     };
