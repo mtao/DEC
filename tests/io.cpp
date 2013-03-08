@@ -20,5 +20,5 @@ int main()
 
     TriangleMesh sc(tris,vecs);
     writeOBJfromSimplicialComplex(sc,"out.obj");
-    return !readOBJtoSimplicialComplex<double>("out.obj");
+    return !readOBJtoSimplicialComplex<TriangleMesh>("out.obj");
 }

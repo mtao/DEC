@@ -13,7 +13,7 @@ class MainWindow: public QMainWindow {
 public:
     MainWindow(QWidget *parent = 0,FormBar * bar = 0);
     typedef NormalTriangleMesh MeshType;
-    typedef DEC<MeshType, true > DECType;
+    typedef DEC<MeshType, false > DECType;
 
 protected:
     void keyPressEvent(QKeyEvent *);

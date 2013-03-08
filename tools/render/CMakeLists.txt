@@ -63,5 +63,7 @@ TARGET_LINK_LIBRARIES(qtRender ${QT_LIBRARIES} decrender dec)
 
 
 ADD_EXECUTABLE(formExample src/formexample.cpp)
+ADD_EXECUTABLE(fluidExample src/fluid.cpp include/fluid.h)
 TARGET_LINK_LIBRARIES(formExample ${QT_LIBRARIES} decrender dec)
+TARGET_LINK_LIBRARIES(fluidExample ${QT_LIBRARIES} decrender dec)
 #TARGET_LINK_LIBRARIES(qtRender ${QT_LIBRARIES} GLEW GL arpack)

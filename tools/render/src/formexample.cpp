@@ -51,6 +51,13 @@ void ExampleWidget::openFile(const QString & filename) {
     d0form.expr = decltype(d0form.expr)::Random(d0form.expr.rows());
     d1form.expr = decltype(d1form.expr)::Random(d1form.expr.rows());
     d2form.expr = decltype(d2form.expr)::Random(d2form.expr.rows());
+
+
+
+
+    p1form.expr = decltype(p1form.expr)::Zero(p1form.expr.rows());
+    p1form.expr(5) = 1;
+    p2form.expr = decltype(p2form.expr)::Zero(p2form.expr.rows());
     emit formLoaded(makeFormPackage("p0", p0form));
     emit formLoaded(makeFormPackage("p1", p1form));
     emit formLoaded(makeFormPackage("p2", p2form));
@@ -119,6 +126,7 @@ void ExampleWidget::solveThings() {
     //rand = std::uniform_int_distribution<int>(0,p1form.expr.rows()-1);
     //p1form.expr(rand(generator)) = 1;
     emit formLoaded(makeFormPackage("initialVelocity", p1form));
+    std::cout << "Initial energy: " << p1form.expr.norm() << std::endl;
 
     p2form = m_dec->d(p1form);
     emit formLoaded(makeFormPackage("rhs", p2form));
@@ -140,16 +148,21 @@ void ExampleWidget::solveThings() {
         std::cout << "Failed at solving" << std::endl;
     }
     p2form.expr = ret;
-    //p2form.expr = ret / ret.lpNorm<Eigen::Infinity>();
-    //p2form.expr = ret;// / ret.lpNorm<Eigen::Infinity>();
     emit formLoaded(makeFormPackage("pressure", p2form));
-    p2form.expr = ret;// / ret.lpNorm<Eigen::Infinity>();
-    p1form.expr -= m_dec->d(m_dec->h(p2form)).expr;
-    m_mesh->advect(p1form,.02);
-    //p1form.expr /= p1form.expr.lpNorm<Eigen::Infinity>();
+    p2form.expr = ret;
+    p1form.expr -= m_dec->h(m_dec->d(m_dec->h(p2form))).expr;
+    std::cout << "Final energy: " << p1form.expr.norm() << std::endl;
+
+
+
+
+    //m_mesh->advect(p1form,.02);
     emit formLoaded(makeFormPackage("projected velocity", p1form));
+
+
+
+
     std::vector<Vector> vfield = m_dec->velocityField(p1form);
-    //for(auto&& s: vfield) std::cout << "-> "<< s.transpose() << std::endl;
     m_glwidget->getVels(vfield);
 
     std::vector<Vector> velocitylines(2*vfield.size());
@@ -312,10 +325,10 @@ int main(int argc, char * argv[]) {
     QApplication a(argc,argv);
     ExampleWidget * mw = new ExampleWidget();
     QStringList args = a.arguments();
+    mw->show();
     if(args.size() > 1) {
         mw->openFile(args[1]);
     }
-    mw->show();
     
 
     return a.exec();

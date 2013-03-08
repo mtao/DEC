@@ -185,6 +185,13 @@ public:
         };
 
     };
+    template <int M=TopDim, FormType Form=PRIMAL_FORM>
+    struct dec_operator {
+        typedef operator_private<(Form==PRIMAL_FORM)?M:TopDim-M> operator_type;
+        typedef typename operator_private<(Form==PRIMAL_FORM)?M:TopDim-M>::type type;
+        typedef typename std::conditional<(Form==PRIMAL_FORM), typename operator_type::d_primal_type, typename operator_type::d_dual_type>::type d_type;
+        typedef typename std::conditional<(Form==PRIMAL_FORM), typename operator_type::hodge_primal_type, typename operator_type::hodge_dual_type>::type h_type;
+    };
     template <FormType Type=PRIMAL_FORM, int M=0>
     struct form{
         typedef dimensional_traits<DimTraits::Top,M> dim_traits;

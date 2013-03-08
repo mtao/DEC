@@ -154,7 +154,7 @@ protected:
               //sc.template numSimplices<Complex_::Dim>())
               )
         , m_hodge_dual(
-              sc.template numSimplices<DimTraits::Dim>()
+              sc.template numSimplices<DimTraits::Top - DimTraits::Dim>()
               //SparseMatrixColMajor(sc.template numSimplices<Complex_::Dim>(),
               //sc.template numSimplices<Complex_::Dim>())
               )
@@ -162,11 +162,14 @@ protected:
         for(auto&& s: sc.template constSimplices<DimTraits::Dim>())
         {
             m_hodge_primal.data().diagonal()(s.Index()) = s.DualVolume() / s.Volume();
-            m_hodge_dual.data().diagonal()(s.Index()) = s.Volume() / s.DualVolume();
             /*
             m_hodge_primal.data().coeffRef(s.Index(),s.Index()) = s.DualVolume() / s.Volume();
             m_hodge_dual.data().coeffRef(s.Index(),s.Index()) = s.Volume() / s.DualVolume();
             */
+        }
+        for(auto&& s: sc.template constSimplices<DimTraits::Top-DimTraits::Dim>())
+        {
+            m_hodge_dual.data().diagonal()(s.Index()) = s.Volume() / s.DualVolume();
         }
     }
 protected:
@@ -224,12 +227,15 @@ protected:
               sc.template numSimplices<D>()
               )
         , m_hodge_dual(
-              sc.template numSimplices<D>()
+              sc.template numSimplices<TmD>()
               )
     {
         for(auto&& s: sc.template constSimplices<D>())
         {
             m_hodge_primal.data().diagonal()(s.Index()) = s.DualVolume() / s.Volume();
+        }
+        for(auto&& s: sc.template constSimplices<TmD>())
+        {
             m_hodge_dual.data().diagonal()(s.Index()) = s.Volume() / s.DualVolume();
         }
 
@@ -336,16 +342,18 @@ public:
 public:
     template <int M, FormType Form = PRIMAL_FORM, bool Int=Interior>
     auto d()const
-    -> const typename DECTraits::template operator_private<M>::template d_type<Form,Int>::type &
-    { return DECTraits::template operator_private<M>::type::template internal_d<Form,Int>();}
+    -> const typename DECTraits::template dec_operator<M,Form>::d_type &
+    { return DECTraits::template dec_operator<M,Form>::type::template internal_d<Form,Int>();}
 
 
 
 
     template <int M, FormType Form = PRIMAL_FORM>
     auto h()const
-    -> const typename DECTraits::template operator_private<M>::template hodge_type<Form>::type &
-    { return DECTraits::template operator_private<M>::type::template internal_h<Form>();}
+    -> const typename DECTraits::template dec_operator<M,Form>::h_type &
+    { return DECTraits::template dec_operator<M,Form>::type::template internal_h<Form>();}
+
+
     template <typename Traits, typename Expr>
     auto d(const mtao_internal::FormExpression<Traits, Expr> & rhs)
     -> decltype (d<Traits::NOut, Traits::TypeOut>() * rhs)
