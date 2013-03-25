@@ -8,8 +8,15 @@
 #include <Eigen/LU>
 #include "index.hpp"
 typedef unsigned int uint;
+#define MTAO_DEBUG_VECTOR(x) std::cerr << #x << " = " << x.transpose() << std::endl;
 
-
+#define PLAIN_CLASS_NUM_DEFS \
+    typedef typename NumTraits::Vector Vector;\
+    typedef typename NumTraits::Scalar Scalar;\
+    typedef typename NumTraits::Triplet Triplet;\
+    typedef typename NumTraits::SparseMatrix SparseMatrix;\
+    typedef typename NumTraits::DiagonalMatrix DiagonalMatrix;\
+    typedef typename NumTraits::SparseMatrixColMajor SparseMatrixColMajor;
 namespace mtao_internal {
 template <typename T, int DIM=Eigen::Dynamic>
 struct num_traits
@@ -54,7 +61,7 @@ struct dimensional_traits {
     typedef dimensional_traits<Top,Top> TopTraits;
     typedef dimensional_traits<Top,0> BottomTraits;
 };
-};
+}
 #endif
 
 #ifdef _SIMPLICIAL_COMPLEX_H_
@@ -101,18 +108,23 @@ struct SimplicialComplexTraits {
 #ifndef _FORM_TRAITS_H_
 #define _FORM_TRAITS_H_
 
-enum FormType {NO_FORM=0, PRIMAL_FORM=1, DUAL_FORM=2, BOTH_FORM=3};
+enum class FormType : char {Neither=0, Primal=1,Dual=2, Both=3};
+constexpr FormType operator&(FormType a, FormType b) {
+    return static_cast<FormType>(static_cast<char>(a) & static_cast<char>(b));
+}
 namespace mtao_internal{
 template <int Dim, typename VectorType, FormType type, int N>
 class Form;
 template <int Dim_, FormType TypeIn_, int NIn_, FormType TypeOut_, int NOut_, bool isVector_=false>
 struct form_operator_traits{
-    const static int Dim = Dim_;
     const static FormType TypeIn = TypeIn_;//Typein = -1 means that this should resolve to a vector
     const static FormType TypeOut = TypeOut_;
-    const static int NIn = NIn_;
-    const static int NOut = NOut_;
-    const static bool isVector = isVector_;
+    enum {
+        Dim = Dim_,
+        NIn = NIn_,
+        NOut = NOut_,
+        isVector = isVector_
+    };
 
 };
 
@@ -163,36 +175,36 @@ public:
         , OperatorContainerPrivate<Myself,dim_traits>
         >::type type;
 
-        typedef FormOperator<form_operator_traits<TopDim,PRIMAL_FORM,M,PRIMAL_FORM,M+1>,SparseMatrixColMajor> d_primal_type;
-        typedef FormOperator<form_operator_traits<TopDim,DUAL_FORM,M,DUAL_FORM,M+1>, const SparseMatrixColMajor & > d_dual_type;
+        typedef FormOperator<form_operator_traits<TopDim,FormType::Primal,M,FormType::Primal,M+1>,SparseMatrixColMajor> d_primal_type;
+        typedef FormOperator<form_operator_traits<TopDim,FormType::Dual,M,FormType::Dual,M+1>, const SparseMatrixColMajor & > d_dual_type;
 
-        typedef FormOperator<form_operator_traits<TopDim,DUAL_FORM,M,DUAL_FORM,M+1>, const SparseMatrixColMajor > d_dual_interior_type;
+        typedef FormOperator<form_operator_traits<TopDim,FormType::Dual,M,FormType::Dual,M+1>, const SparseMatrixColMajor > d_dual_interior_type;
 
 
-        typedef FormOperator<form_operator_traits<TopDim,PRIMAL_FORM,M,DUAL_FORM,TopDim-M>, DiagonalMatrix> hodge_primal_type;
-        typedef FormOperator<form_operator_traits<TopDim,DUAL_FORM,M,PRIMAL_FORM,TopDim-M>, DiagonalMatrix> hodge_dual_type;
+        typedef FormOperator<form_operator_traits<TopDim,FormType::Primal,M,FormType::Dual,TopDim-M>, DiagonalMatrix> hodge_primal_type;
+        typedef FormOperator<form_operator_traits<TopDim,FormType::Dual,M,FormType::Primal,TopDim-M>, DiagonalMatrix> hodge_dual_type;
 
         template <FormType Type, bool Interior>
         struct d_type{
-            typedef typename std::conditional<Type==PRIMAL_FORM
+            typedef typename std::conditional<Type==FormType::Primal
             , d_primal_type
             , typename std::conditional<Interior, d_dual_interior_type, d_dual_type >::type
             >::type type;
         };
         template <FormType Type>
         struct hodge_type{
-            typedef typename std::conditional<Type==PRIMAL_FORM, hodge_primal_type, hodge_dual_type >::type type;
+            typedef typename std::conditional<Type==FormType::Primal, hodge_primal_type, hodge_dual_type >::type type;
         };
 
     };
-    template <int M=TopDim, FormType Form=PRIMAL_FORM>
+    template <int M=TopDim, FormType Form=FormType::Primal>
     struct dec_operator {
         typedef operator_private<M> operator_type;
         typedef typename operator_private<M>::type type;
-        typedef typename std::conditional<(Form==PRIMAL_FORM), typename operator_type::d_primal_type, typename operator_type::d_dual_type>::type d_type;
-        typedef typename std::conditional<(Form==PRIMAL_FORM), typename operator_type::hodge_primal_type, typename operator_type::hodge_dual_type>::type h_type;
+        typedef typename std::conditional<(Form==FormType::Primal), typename operator_type::d_primal_type, typename operator_type::d_dual_type>::type d_type;
+        typedef typename std::conditional<(Form==FormType::Primal), typename operator_type::hodge_primal_type, typename operator_type::hodge_dual_type>::type h_type;
     };
-    template <FormType Type=PRIMAL_FORM, int M=0>
+    template <FormType Type=FormType::Primal, int M=0>
     struct form{
         typedef dimensional_traits<DimTraits::Top,M> dim_traits;
         typedef Form<DimTraits::Top, typename NumTraits::DynamicVector,Type,M> type;

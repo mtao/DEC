@@ -258,6 +258,7 @@ protected:
     SimplicialComplexPrivate(const std::vector<NSimplex > & simplices, const std::vector<Vector> & vertices);
     SimplicialComplexPrivate(const std::vector<mtao::IndexSet<N+1> > & tuples, const std::vector<Vector> & vertices);
     SimplicialComplexPrivate(const std::vector<unsigned int > & tuples, const std::vector<Vector> & vertices);
+    SimplicialComplexPrivate(const std::vector<std::array<unsigned int, Dim+1> > & tuples, const std::vector<Vector> & vertices);
 
 
 
@@ -369,6 +370,19 @@ SimplicialComplexPrivate(const std::vector<mtao::IndexSet<N+1> > & tuples, const
                    [](const mtao::IndexSet<N+1> & is) -> NSimplex
     {
         return NSimplex(is);
+    });
+
+    init();
+}
+
+template <typename NT, typename DT> SimplicialComplexPrivate<NT,DT>::
+SimplicialComplexPrivate(const std::vector<std::array<unsigned int, Dim+1> > & tuples, const std::vector<Vector> & vertices) {
+    SC0::m_vertices=vertices;
+    m_simplices.resize(tuples.size());
+    std::transform(tuples.begin(), tuples.end(), m_simplices.begin(),
+                   [](const std::array<unsigned int, N+1> & is) -> NSimplex
+    {
+        return NSimplex(static_cast<const mtao::IndexSet<N+1> >(is));
     });
 
     init();
@@ -747,12 +761,7 @@ public:
     static const int N = N_;
     static const int TopDim = N_;
     static const int EmbeddedDim = NT::Dim;
-    typedef typename NumTraits::Vector Vector;
-    typedef typename NumTraits::Scalar Scalar;
-    typedef typename NumTraits::Triplet Triplet;
-    typedef typename NumTraits::SparseMatrix SparseMatrix;
-    typedef typename NumTraits::DiagonalMatrix DiagonalMatrix;
-    typedef typename NumTraits::SparseMatrixColMajor SparseMatrixColMajor;
+    PLAIN_CLASS_NUM_DEFS
     typedef  Simplex<NumTraits, DimTraits> NSimplex;
 
     template <int M=N>
@@ -779,6 +788,11 @@ public:
         : PrivateParent(tuples,vertices)
     {
     }
+    SimplicialComplex(const std::vector<std::array<unsigned int, N+1> > & tuples, const std::vector<Vector> & vertices)
+        : PrivateParent(tuples,vertices)
+    {
+    }
+
 
     SimplicialComplex(const std::vector<unsigned int > & tuples, const std::vector<Vector> & vertices)
         : PrivateParent(tuples,vertices)

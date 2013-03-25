@@ -1,3 +1,5 @@
+#ifndef _SPHERE_MESH_GEN_H_
+#define _SPHERE_MESH_GEN_H_
 #include <array>
 #include <map>
 #include <vector>
@@ -15,8 +17,12 @@ class SphereMeshFactory{
         void triforce(const Face & f, int depth);
         unsigned int add_edge(Edge e);
         void write(const std::string & filename);
+        void write(std::ostream & outstream);
+        const std::vector<Face> faces() const {return m_faces;}
+        const std::vector<Vector> vertices() const {return m_vertices;}
 
     private:
+        const int m_depth = 0;
         std::vector<Vector> m_vertices;
         std::vector<Face> m_faces;
         std::map<Edge, unsigned int> m_edges;
@@ -26,7 +32,7 @@ class SphereMeshFactory{
 
 
 template <typename T>
-SphereMeshFactory<T>::SphereMeshFactory(int depth) {
+SphereMeshFactory<T>::SphereMeshFactory(int depth): m_depth(depth) {
     //Create icosahedron base
 
     Scalar gr = .5 * (1 + std::sqrt(Scalar(5)));
@@ -113,7 +119,12 @@ unsigned int SphereMeshFactory<T>::add_edge(Edge e) {
 template <typename T>
 void SphereMeshFactory<T>::write(const std::string & filename) {
     std::ofstream outstream(filename.c_str());
+    write(outstream);
+}
 
+template <typename T>
+void SphereMeshFactory<T>::write(std::ostream & outstream) {
+    outstream << "#Icosahedral subdivision to depth " << m_depth << std::endl;
     for(auto&& v: m_vertices) {
         outstream << "v " << v.transpose() << std::endl;
     }
@@ -122,3 +133,4 @@ void SphereMeshFactory<T>::write(const std::string & filename) {
         outstream << "f " << f[0]+1 << " " << f[1]+1 << " " << f[2]+1 << std::endl;
     }
 }
+#endif

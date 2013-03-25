@@ -90,6 +90,7 @@ public:
             m_dec->getVelocityInPlace(m_pos,*m_simplex, form,velocity);
             if(reverse) velocity *= -1;
             auto&& basis = m_dec->complex().whitneyBasis(*m_simplex);
+            std::cout << basis << std::endl;
             int sind = 0;
             int traversed_edge = -1;
             Scalar timeToIntersection = std::numeric_limits<Scalar>::max();
@@ -132,8 +133,8 @@ public:
         }//while loop
 
     }//function
-    typename DEC::DECTraits::template form<PRIMAL_FORM,Simplex::Dim>::type activeSimplex() {
-        auto form = m_dec->template genForm<PRIMAL_FORM, Simplex::Dim>();
+    typename DEC::DECTraits::template form<FormType::Primal,Simplex::Dim>::type activeSimplex() {
+        auto form = m_dec->template genForm<FormType::Primal, Simplex::Dim>();
         form.expr.setZero();
         form.expr(m_simplex->Index()) = 1;
         return form;

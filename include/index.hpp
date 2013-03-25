@@ -23,6 +23,10 @@ struct IndexSet: public std::array<Index, N>{
         this->fill(0);
     }
 
+    IndexSet(const std::array<Index, N> & other)
+    {
+        std::copy(other.cbegin(), other.cend(), this->begin());
+    }
     IndexSet(const IndexSet & other)
     {
         std::copy(other.cbegin(), other.cend(), this->begin());

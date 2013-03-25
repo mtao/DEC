@@ -22,12 +22,12 @@ private:
     typedef typename TriangleMeshf::Vector Vector;
     Vector v;
     void solveThings();
-    decltype(m_dec->template genForm<PRIMAL_FORM,0>()) p0form;
-    decltype(m_dec->template genForm<PRIMAL_FORM,1>()) p1form;
-    decltype(m_dec->template genForm<PRIMAL_FORM,2>()) p2form;
-    decltype(m_dec->template genForm<DUAL_FORM  ,0>()) d0form;
-    decltype(m_dec->template genForm<DUAL_FORM  ,1>()) d1form;
-    decltype(m_dec->template genForm<DUAL_FORM  ,2>()) d2form;
+    decltype(m_dec->template genForm<FormType::Primal,0>()) p0form;
+    decltype(m_dec->template genForm<FormType::Primal,1>()) p1form;
+    decltype(m_dec->template genForm<FormType::Primal,2>()) p2form;
+    decltype(m_dec->template genForm<FormType::Dual  ,0>()) d0form;
+    decltype(m_dec->template genForm<FormType::Dual  ,1>()) d1form;
+    decltype(m_dec->template genForm<FormType::Dual  ,2>()) d2form;
     std::unique_ptr<std::vector<Particle<DECType> > > particles;
 };
 #include <iostream>
@@ -36,13 +36,13 @@ ExampleWidget::ExampleWidget(QWidget * parent): MainWindow(parent){
 }
 void ExampleWidget::openFile(const QString & filename) {
     MainWindow::openFile(filename);
-    p2form = m_dec->template genForm<PRIMAL_FORM,2>();
-    p1form = m_dec->template genForm<PRIMAL_FORM,1>();
-    p0form = m_dec->template genForm<PRIMAL_FORM,0>();
+    p2form = m_dec->template genForm<FormType::Primal,2>();
+    p1form = m_dec->template genForm<FormType::Primal,1>();
+    p0form = m_dec->template genForm<FormType::Primal,0>();
 
-    d2form = m_dec->template genForm<DUAL_FORM,2>();
-    d1form = m_dec->template genForm<DUAL_FORM,1>();
-    d0form = m_dec->template genForm<DUAL_FORM,0>();
+    d2form = m_dec->template genForm<FormType::Dual,2>();
+    d1form = m_dec->template genForm<FormType::Dual,1>();
+    d0form = m_dec->template genForm<FormType::Dual,0>();
 
     p0form.expr = decltype(p0form.expr)::Random(p0form.expr.rows());
     p1form.expr = decltype(p1form.expr)::Random(p1form.expr.rows());
@@ -195,9 +195,9 @@ void ExampleWidget::solveThings() {
 bool dumb = true;
 void MainWindow::randomData() {
     if(!m_dec || !m_mesh) {return;}
-    auto&& form2 = m_dec->template genForm<PRIMAL_FORM,2>();
-    auto&& form1 = m_dec->template genForm<PRIMAL_FORM,1>();
-    auto&& form0 = m_dec->template genForm<PRIMAL_FORM,0>();
+    auto&& form2 = m_dec->template genForm<FormType::Primal,2>();
+    auto&& form1 = m_dec->template genForm<FormType::Primal,1>();
+    auto&& form0 = m_dec->template genForm<FormType::Primal,0>();
 #ifdef CHECK_INTERIORS
     auto&& interior2 = m_mesh->template interior<2>();
     for(int i=0; i < interior2.rows(); ++i) {
@@ -232,9 +232,9 @@ void MainWindow::randomData() {
         dumb = false;
     std::cout << dhdh << std::endl;
     std::cout << m_dec->template h<2>().expr << std::endl;
-    std::cout << m_dec->template d<0,DUAL_FORM>().expr << std::endl;
-    std::cout << m_dec->template h<1,DUAL_FORM>().expr << std::endl;
-    std::cout << m_dec->template d<1,PRIMAL_FORM>().expr << std::endl;
+    std::cout << m_dec->template d<0,FormType::Dual>().expr << std::endl;
+    std::cout << m_dec->template h<1,FormType::Dual>().expr << std::endl;
+    std::cout << m_dec->template d<1,FormType::Primal>().expr << std::endl;
     for(auto&& s: m_mesh->template simplices<1>()) {
         std::cout << s.Volume() << " " << s.DualVolume() << std::endl;
     }

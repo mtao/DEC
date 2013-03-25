@@ -53,7 +53,7 @@ namespace mtao_internal{
     template <typename Form>
         constexpr RenderType formToRendertype(const Form &) {
             return RenderType(
-                        (Form::Traits::TypeOut== DUAL_FORM)
+                        (Form::Traits::TypeOut== FormType::Dual)
                 *RT_DUAL+
                         (Form::Traits::NOut == 0)
                 *RT_VERT+

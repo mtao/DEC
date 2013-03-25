@@ -117,12 +117,12 @@ protected:
     FormFactory(const Complex & sc): m_sc(sc) {}
 
 public:
-    template <FormType Type = PRIMAL_FORM, int N = Complex::Dim>
+    template <FormType Type = FormType::Primal, int N = Complex::Dim>
     Form<DimTraits::Dim, typename Complex::NumTraits::DynamicVector,Type,N> genForm() const
     {
         static_assert(N <= Complex::Dim,"Form can't be of higher dim than top dim of simplicial complex");
         return Form<Complex::Dim,typename Complex::NumTraits::DynamicVector,Type,N>(
-                    (Type == PRIMAL_FORM) ?  m_sc.template numSimplices<N>() : m_sc.template numSimplices <Complex::Dim-N>()
+                    (Type == FormType::Primal) ?  m_sc.template numSimplices<N>() : m_sc.template numSimplices <Complex::Dim-N>()
                                              );
     }
 
@@ -150,26 +150,18 @@ protected:
     // : m_d_dual(sc.template b<Complex_::Dim>())
         : m_hodge_primal(
               sc.template numSimplices<DimTraits::Dim>()
-              //SparseMatrixColMajor(sc.template numSimplices<Complex_::Dim>(),
-              //sc.template numSimplices<Complex_::Dim>())
               )
         , m_hodge_dual(
               sc.template numSimplices<DimTraits::Top - DimTraits::Dim>()
-              //SparseMatrixColMajor(sc.template numSimplices<Complex_::Dim>(),
-              //sc.template numSimplices<Complex_::Dim>())
               )
     {
         for(auto&& s: sc.template constSimplices<DimTraits::Dim>())
         {
             m_hodge_primal.data().diagonal()(s.Index()) = s.DualVolume() / s.Volume();
-            /*
-            m_hodge_primal.data().coeffRef(s.Index(),s.Index()) = s.DualVolume() / s.Volume();
-            m_hodge_dual.data().coeffRef(s.Index(),s.Index()) = s.Volume() / s.DualVolume();
-            */
         }
         for(auto&& s: sc.template constSimplices<DimTraits::Top-DimTraits::Dim>())
         {
-            m_hodge_dual.data().diagonal()(s.Index()) = s.Volume() / s.DualVolume();
+            m_hodge_dual.data().diagonal()(s.Index()) = s.DualVolume() / s.Volume();
         }
     }
 protected:
@@ -193,7 +185,7 @@ public:
     auto internal_h() const
     -> const typename MyTraits::template hodge_type<Type>::type &
     {
-        return internal_h(typename std::conditional<Type==PRIMAL_FORM, primal_tag, dual_tag>::type());
+        return internal_h(typename std::conditional<Type==FormType::Primal, primal_tag, dual_tag>::type());
     }
 };
 
@@ -215,8 +207,7 @@ protected:
     const static int TmD = TopD - D;
     typedef typename DECTraits::NumTraits NumTraits;
     typedef typename DECTraits::Complex Complex;
-    typedef typename NumTraits::SparseMatrixColMajor SparseMatrixColMajor;
-    typedef typename NumTraits::DiagonalMatrix DiagonalMatrix;
+    PLAIN_CLASS_NUM_DEFS
     typedef typename DECTraits::template operator_private<DimTraits::UpperTraits::Dim>::type Parent;
     OperatorContainerPrivate(const Complex & sc)
         : Parent(sc)
@@ -236,7 +227,7 @@ protected:
         }
         for(auto&& s: sc.template constSimplices<TmD>())
         {
-            m_hodge_dual.data().diagonal()(s.Index()) = s.Volume() / s.DualVolume();
+            m_hodge_dual.data().diagonal()(s.Index()) = s.DualVolume() / s.Volume();
         }
 
     }
@@ -284,14 +275,14 @@ protected:
     auto internal_d() const
     -> const typename MyTraits::template d_type<Type,Interior>::type &
     {
-        return internal_d(typename std::conditional<Type==PRIMAL_FORM, primal_tag
+        return internal_d(typename std::conditional<Type==FormType::Primal, primal_tag
                           , typename std::conditional<Interior, dual_interior_tag, dual_tag>::type >::type());
     }
     template <FormType Type>
     auto internal_h() const
     -> const typename MyTraits::template hodge_type<Type>::type &
     {
-        return internal_h(typename std::conditional<Type==PRIMAL_FORM, primal_tag, dual_tag>::type());
+        return internal_h(typename std::conditional<Type==FormType::Primal, primal_tag, dual_tag>::type());
     }
 };
 
@@ -340,7 +331,7 @@ public:
 
 
 public:
-    template <int M, FormType Form = PRIMAL_FORM, bool Int=Interior>
+    template <int M, FormType Form = FormType::Primal, bool Int=Interior>
     auto d()const
     -> const typename DECTraits::template dec_operator<M,Form>::d_type &
     { return DECTraits::template dec_operator<M,Form>::type::template internal_d<Form,Int>();}
@@ -348,7 +339,7 @@ public:
 
 
 
-    template <int M, FormType Form = PRIMAL_FORM>
+    template <int M, FormType Form = FormType::Primal>
     auto h()const
     -> const typename DECTraits::template dec_operator<M,Form>::h_type &
     { return DECTraits::template dec_operator<M,Form>::type::template internal_h<Form>();}
@@ -375,7 +366,7 @@ public:
     //==               Form Generation                  ==
     //====================================================
     //====================================================
-    template <FormType Type=PRIMAL_FORM, int M=0>
+    template <FormType Type=FormType::Primal, int M=0>
     typename DECTraits::template form<Type,M>::type genForm() const {
         return FF::template genForm<Type,M>();
     }
@@ -387,7 +378,7 @@ public:
     //====================================================
 
 
-    typedef typename DECTraits::template form<PRIMAL_FORM, Dim-1>::type Nm1Form;
+    typedef typename DECTraits::template form<FormType::Primal, Dim-1>::type Nm1Form;
     typedef typename Complex::SCTraits::template internal_complex<Dim>::type::WhitneyBasis VelocityBasis;
     typedef typename Complex::SCTraits::template internal_complex<Dim>::type::WhitneyCoefficients VelocityCoefficients;
     typedef typename Complex::Vector Vector;

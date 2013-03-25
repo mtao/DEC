@@ -57,7 +57,7 @@ template <typename Preconditioner, typename Matrix, typename Vector>
 void PreconditionedConjugateGradientSolve(const Matrix & A, const Vector & b, Vector & x)
 {
     auto residual = (b-A*x).template lpNorm<Eigen::Infinity>();
-    auto solver = IterativeLinearSolver<PreconditionedConjugateGradientCapsule<Matrix,Vector, Preconditioner> >(A.rows(), 1e-8*residual);
+    auto solver = IterativeLinearSolver<PreconditionedConjugateGradientCapsule<Matrix,Vector, Preconditioner> >(A.rows(), std::max(1e-5*residual,1e-10));
     //auto solver = IterativeLinearSolver<PreconditionedConjugateGradientCapsule<Matrix,Vector, Preconditioner> >(A.rows(), 1e-5);
     solver.solve(A,b,x);
 }

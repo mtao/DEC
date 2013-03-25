@@ -15,7 +15,7 @@ auto NormalTriangleMesh::equalNormal() -> std::vector<Vector> {
     for(auto&& n: normals) {
         n.normalize();
     }
-    return normals;
+    return std::move(normals);
 }
 
 auto NormalTriangleMesh:: areaNormal() -> std::vector<Vector> {
@@ -29,7 +29,7 @@ auto NormalTriangleMesh:: areaNormal() -> std::vector<Vector> {
     for(auto&& n: normals) {
         n.normalize();
     }
-    return normals;
+    return std::move(normals);
 }
 auto NormalTriangleMesh:: angleNormal() -> std::vector<Vector> {
     std::vector<Vector> normals(vertices().size(), Vector(0,0,0));
@@ -49,15 +49,35 @@ auto NormalTriangleMesh:: angleNormal() -> std::vector<Vector> {
     for(auto&& n: normals) {
         n.normalize();
     }
-    return normals;
+    return std::move(normals);
 }
 auto NormalTriangleMesh:: meanCurvatureNormal() -> std::vector<Vector> {
     std::vector<Vector> normals(vertices().size(), Vector(0,0,0));
-    return normals;
+
+
+    for(auto&& s: simplices<2>()) {
+        for(typename SparseMatrix::InnerIterator it(b(), s.Index()); it; ++it) {
+            auto& e = simplex<1>(it.row());
+            uint ind = s.oppositeIndex(e);
+            Vector v0 = vertex(e[0]) - vertex(ind);
+            Vector v1 = vertex(e[1]) - vertex(ind);
+            Scalar cot = v0.dot(v1)/v0.cross(v1).norm();//If the mesh is voronoi all angles should be less than \pi/2 right?
+            Vector dir = cot * vertex(e[1]) - vertex(e[0]);
+            normals[e[0]] -= dir;
+            normals[e[1]] -= dir;
+        }
+    }
+    int i=0;
+    for(auto&& n: normals) {
+        EIGEN_DEBUG_VAR(vertex(i).normalized().dot(n))
+        n.normalize();
+    }
+
+    return std::move(normals);
 }
 auto NormalTriangleMesh:: sphereNormal() -> std::vector<Vector> {
     std::vector<Vector> normals(vertices().size(), Vector(0,0,0));
-    return normals;
+    return std::move(normals);
 }
 auto NormalTriangleMesh:: getNormals(NormalType type) -> std::vector<Vector> {
     switch(type) {

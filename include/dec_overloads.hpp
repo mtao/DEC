@@ -26,9 +26,9 @@ struct deduceFormTraits
     //Traits1 * Traits2
     typedef form_operator_traits<
     (Traits1::Dim == Traits2::Dim) ? Traits1::Dim : -2,
-    (Traits1::TypeIn & Traits2::TypeOut) ? Traits2::TypeIn : NO_FORM,
+    (Traits1::TypeIn & Traits2::TypeOut) != FormType::Neither ? Traits2::TypeIn : FormType::Neither,
     (Traits1::NIn == Traits2::NOut) ? Traits2::NIn : -2,
-    (Traits1::TypeIn & Traits2::TypeOut) ? Traits1::TypeOut: NO_FORM,
+    (Traits1::TypeIn & Traits2::TypeOut) != FormType::Neither ? Traits1::TypeOut: FormType::Neither,
     (Traits1::NIn == Traits2::NOut) ? Traits1::NOut : -2,
     isVector
     >
@@ -40,7 +40,8 @@ constexpr bool is_valid_form_trait()
 {
     return
             (Traits::Dim >= 0)
-            && (Traits::TypeIn | Traits::TypeOut)
+            && (Traits::TypeIn != FormType::Neither)
+            && (Traits::TypeOut != FormType::Neither)
             && ((Traits::isVector && Traits::NIn == -1) || Traits::NIn >= 0)
             && (Traits::NOut >= 0)
             ;
@@ -105,7 +106,7 @@ decltype(
 constexpr int toPrimalDim(FormType type, int N, int TopD){return 0;}
 };
 /*
-    template <
+    template <s
         FormType TypeIn1, int NIn1,FormType TypeOut1, int NOut1, typename Expr1,
         FormType TypeIn1, int NIn1,FormType TypeOut1, int NOut1,typename Expr2
         >

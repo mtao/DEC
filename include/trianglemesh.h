@@ -15,13 +15,17 @@ public:
     typedef SCParent::DimTraits DimTraits;
     typedef typename DECParent::Nm1Form VelocityFormType;
     using SCParent::Dim;
-    typedef SCParent::Vector Vector;
-    typedef SCParent::Scalar Scalar;
-    typedef SCParent::SparseMatrixColMajor SparseMatrixColMajor;
+    PLAIN_CLASS_NUM_DEFS
     NormalTriangleMesh()
         : DECParent(*dynamic_cast<SCParent*>(this))
     {}
     NormalTriangleMesh(const std::vector<mtao::IndexSet<N+1> > & tuples, const std::vector<Vector> & vertices)
+        : SCParent(tuples,vertices)
+        , DECParent(*dynamic_cast<SCParent*>(this))
+    {
+        init();
+    }
+    NormalTriangleMesh(const std::vector<std::array<unsigned int, N+1> > & tuples, const std::vector<Vector> & vertices)
         : SCParent(tuples,vertices)
         , DECParent(*dynamic_cast<SCParent*>(this))
     {

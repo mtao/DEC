@@ -21,6 +21,7 @@ protected:
 public slots:
     void openFile();
     virtual void openFile(const QString & filename);
+    virtual void initializeMesh();
 protected:
     GLWidget * m_glwidget;
     std::unique_ptr<MeshType> m_mesh;

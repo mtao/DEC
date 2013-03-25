@@ -65,6 +65,8 @@ private:
     QVector3D m_rotation;
     QVector3D m_angularMomentum;
     QVector3D m_accumulatedMomentum;
+    signals:
+    void doneInitializingGL();
 public slots:
     void disableRendering(){m_doRender =false;}
     void enableRendering(){m_doRender = true;}

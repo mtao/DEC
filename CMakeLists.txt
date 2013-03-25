@@ -54,6 +54,18 @@ SET(DEC_HEADERS
     include/render.hpp
     include/advection.hpp
     include/trianglemesh.h
+    include/solvers/linear/linear.h
+    include/solvers/linear/jacobi/jacobi.hpp
+    include/solvers/linear/conjugate_gradient/cg.hpp
+    include/solvers/linear/conjugate_gradient/pcg.hpp
+    include/solvers/linear/gauss_seidel/gauss_seidel.hpp
+    include/solvers/cholesky/ldlt.hpp
+    include/solvers/cholesky/llt.hpp
+    include/solvers/quadratic/mprgp/mprgp_box.hpp
+    include/solvers/quadratic/mprgp/mprgp.hpp
+    include/solvers/quadratic/quadratic.h
+    include/solvers/quadratic/jacobi/jacobi.hpp
+    include/solvers/quadratic/gauss_seidel/gauss_seidel.hpp
     #include/kdtree.hpp
     )
 

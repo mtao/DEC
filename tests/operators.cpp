@@ -27,10 +27,10 @@ class DECTest: public DEC<TriangleMesh>
         std::cout << "Laplace2" << std::endl;
         std::cout << ((d(h<2>()))).constData() << std::endl;
         std::cout << d(h(d(h<2>()))).constData() << std::endl;
-     auto form = genForm<PRIMAL_FORM,1>();
-    auto form2 = genForm<PRIMAL_FORM,1>();
+     auto form = genForm<FormType::Primal,1>();
+    auto form2 = genForm<FormType::Primal,1>();
     form2.data().setOnes();
-    decltype(genForm<PRIMAL_FORM,1>()) form3(form2 + form2);
+    decltype(genForm<FormType::Primal,1>()) form3(form2 + form2);
     form3 = form3 + form2;
     std::cout << form.constData().transpose() << std::endl;
     std::cout << form2.constData().transpose() << std::endl;

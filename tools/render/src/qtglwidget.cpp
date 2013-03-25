@@ -74,6 +74,7 @@ void GLWidget::initFormShader(ShaderProgram & program, const QString & geotype) 
         geometry = tr("");//hopefully "" file won't exist
     }
     initShader(program,vertex,fragment,geometry);
+    emit doneInitializingGL();
 }
 void GLWidget::initShader(ShaderProgram & program, const QString & v, const QString &f, const QString &g) {
 

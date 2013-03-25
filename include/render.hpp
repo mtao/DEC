@@ -26,15 +26,15 @@ template <typename Form>
 constexpr unsigned int MeshSize() {
     return Form::Traits::NOut+1;
     /*
-    return (Form::Traits::TypeOut == PRIMAL_FORM) *
+    return (Form::Traits::TypeOut == FormType::Primal) *
         (Form::Traits::NOut+1) +
-    (Form::Traits::TypeOut == DUAL_FORM) *
+    (Form::Traits::TypeOut == FormType::Dual) *
         (Form::Traits::Dim-Form::Traits::NOut+1);
         */
 }
 template <typename Form>
 constexpr bool shouldFormGenUseIndices() {
-    return (Form::Traits::NOut == 2 && Form::Traits::TypeOut == DUAL_FORM);
+    return (Form::Traits::NOut == 2 && Form::Traits::TypeOut == FormType::Dual);
 }
 
 template <typename Form>
