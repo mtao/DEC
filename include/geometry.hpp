@@ -153,7 +153,6 @@ void gramSchmidt(Matrix & basis) {
 template <typename Matrix>
 auto normal(Matrix & basis) -> Eigen::Matrix<typename Matrix::Scalar, Matrix::RowsAtCompileTime, 1>{
     typedef Eigen::Matrix<typename Matrix::Scalar, Matrix::RowsAtCompileTime, 1> Vector;
-    typedef typename Vector::Scalar Scalar;
     gramSchmidt(basis);
 
     Vector v;
