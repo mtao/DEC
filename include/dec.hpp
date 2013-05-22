@@ -266,10 +266,7 @@ private:
     auto  internal_d(dual_tag) const
     -> const decltype(m_d_dual) &
     {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wreturn-stack-address"
         return m_d_dual;
-#pragma GCC diagnostic pop
     }
 protected:
     template <FormType Type, bool Interior>
