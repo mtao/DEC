@@ -19,10 +19,10 @@ typedef unsigned int uint;
     typedef typename NumTraits::SparseMatrixColMajor SparseMatrixColMajor;
 namespace mtao_internal {
 template <typename T, int DIM=Eigen::Dynamic>
-struct num_traits
+struct NumTraits 
 {
     typedef T Scalar;
-    static const int Dim = DIM;
+    enum {dim = DIM};
     typedef mtao::IndexSet<Dim> IndexSet;
     typedef Eigen::Matrix<T,DIM,1> Vector;
     typedef Eigen::Matrix<T,3,1> Vector3;
@@ -49,17 +49,17 @@ struct num_traits
     typedef Eigen::Triplet<Scalar> Triplet;
 };
 
-typedef num_traits<float,Eigen::Dynamic> num_traitsXf;
-typedef num_traits<double,Eigen::Dynamic> num_traitsXd;
+typedef NumTraits<float,Eigen::Dynamic> NumTraitsXf;
+typedef NumTraits<double,Eigen::Dynamic> NumTraitsXd;
 
-template <int Top_, int Dim_>
-struct dimensional_traits {
-    const static int Top = Top_;
-    const static int Dim = Dim_;
-    typedef dimensional_traits<Top,Dim-1> LowerTraits;
-    typedef dimensional_traits<Top,Dim+1> UpperTraits;
-    typedef dimensional_traits<Top,Top> TopTraits;
-    typedef dimensional_traits<Top,0> BottomTraits;
+template <int Top, int Dim>
+struct DimTraits {
+    enum {top = Top
+        dim = Dim};
+    typedef DimTraits<top,dim-1> LowerTraits;
+    typedef DimTraits<top,dim+1> UpperTraits;
+    typedef DimTraits<top,top> TopTraits;
+    typedef DimTraits<top,0> BottomTraits;
 };
 }
 #endif
@@ -86,7 +86,7 @@ struct SimplicialComplexTraits {
     typedef DT DimTraits;
     template <int M=DimTraits::Top>
     struct internal_complex{
-        typedef dimensional_traits<DimTraits::Top,M> dim_traits;
+        typedef DimTraits<DimTraits::Top,M> dim_traits;
         typedef typename std::conditional<M<=0
         , SimplicialComplexPrivateBase<NT,dim_traits>
         , SimplicialComplexPrivate<NT,dim_traits>
@@ -94,7 +94,7 @@ struct SimplicialComplexTraits {
     };
     template <int M=DimTraits::Top>
     struct simplex{
-        typedef dimensional_traits<DimTraits::Top,M> dim_traits;
+        typedef DimTraits<DimTraits::Top,M> dim_traits;
         typedef Simplex<NumTraits, dim_traits> type;
     };
     typedef SimplicialComplex<NumTraits,DimTraits::Top> type;
@@ -169,7 +169,7 @@ public:
     typedef typename NumTraits::SparseMatrixColMajor SparseMatrixColMajor;
     template <int M=0>
     struct operator_private{
-        typedef dimensional_traits<DimTraits::Top,M> dim_traits;
+        typedef DimTraits<DimTraits::Top,M> dim_traits;
         typedef typename std::conditional< M>=TopDim
         , OperatorContainerPrivateBase<Myself>
         , OperatorContainerPrivate<Myself,dim_traits>
@@ -206,7 +206,7 @@ public:
     };
     template <FormType Type=FormType::Primal, int M=0>
     struct form{
-        typedef dimensional_traits<DimTraits::Top,M> dim_traits;
+        typedef DimTraits<DimTraits::Top,M> dim_traits;
         typedef Form<DimTraits::Top, typename NumTraits::DynamicVector,Type,M> type;
     };
     typedef OperatorContainer<Myself > operator_type;
