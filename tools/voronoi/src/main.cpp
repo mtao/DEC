@@ -14,7 +14,7 @@ std::pair<std::vector<typename ComplexType::SCTraits::template simplex<1>::type>
     enum {Dim = ComplexType::Dim};
     typedef typename ComplexType::Vector Vector;
     auto mesh = readOBJtoSimplicialComplex<ComplexType>(filename);
-    const SparseMatrix & d1 = mesh->template d<1>().expr;
+    const SparseMatrix & d1 = mesh->template d<Dim-1>().expr;
 
     typedef typename ComplexType::SCTraits::template simplex<1>::type EdgeType;
     std::vector<EdgeType> indices(mesh->template simplices<Dim-1>().size());
