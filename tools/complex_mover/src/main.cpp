@@ -99,8 +99,6 @@ int main(int argc, char * argv[]) {
     Gradient grad(grid);
     typedef typename Gradient::OutGridType GradGrid;
     typename GradGrid::Ptr gradGrid = grad.process();
-    typedef typename openvdb::tools::DiscreteField<GradGrid> GradDiscreteField;
-    GradDiscreteField discField(*gradGrid);
 
 
     auto&& pr = getVoronoiMesh<MeshType>(mesh);
@@ -110,14 +108,14 @@ int main(int argc, char * argv[]) {
     auto&& vertices = sc.vertices();
     auto&& edges = sc.template simplices<1>();
 
-    typedef openvdb::math::BoxStencil<GridType> BoxStencil;
-    BoxStencil bs(grid);
+    typedef openvdb::math::BoxStencil<GradGrid> BoxStencil;
+    BoxStencil bs(*gradGrid);
 
     for(auto&& v: vertices) {
         auto&& vdbv = eigen2vdb(v);
-        auto&& iv = grid.worldToIndex(vdbv);
+        openvdb::math::Vec3d iv = grid.worldToIndex(vdbv);
         bs.moveTo(iv);
-        auto&& vec = bs.interpolate(iv);
+        auto&& vec = bs.interpolation(iv);
         v = v - vdb2eigen(vec);
 
     }
