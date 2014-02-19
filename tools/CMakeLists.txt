@@ -1,2 +1,5 @@
 ADD_SUBDIRECTORY(render)
 ADD_SUBDIRECTORY(meshgeneration)
+ADD_SUBDIRECTORY(voronoi)
+message(${CMAKE_CURRENT_SOURCE_DIR})
+message(${CMAKE_SOURCE_DIR})
