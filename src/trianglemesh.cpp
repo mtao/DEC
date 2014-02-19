@@ -51,6 +51,7 @@ auto NormalTriangleMesh:: angleNormal() -> std::vector<Vector> {
     }
     return std::move(normals);
 }
+#define EIGEN_DEBUG_VAR2(x) if(x < 0) EIGEN_DEBUG_VAR(x)
 auto NormalTriangleMesh:: meanCurvatureNormal() -> std::vector<Vector> {
     std::vector<Vector> normals(vertices().size(), Vector(0,0,0));
 
@@ -63,14 +64,22 @@ auto NormalTriangleMesh:: meanCurvatureNormal() -> std::vector<Vector> {
             Vector v1 = vertex(e[1]) - vertex(ind);
             Scalar cot = v0.dot(v1)/v0.cross(v1).norm();//If the mesh is voronoi all angles should be less than \pi/2 right?
             Vector dir = cot * vertex(e[1]) - vertex(e[0]);
+            /*
+            EIGEN_DEBUG_VAR(( vertex(e[0])).norm())
+            EIGEN_DEBUG_VAR(( vertex(e[1])).norm())
+            EIGEN_DEBUG_VAR(( -dir + vertex(e[0])).norm())
+            EIGEN_DEBUG_VAR(( -dir + vertex(e[1])).norm())
+            */
             normals[e[0]] -= dir;
             normals[e[1]] -= dir;
+        EIGEN_DEBUG_VAR2(vertex(e[0]).normalized().dot(normals[e[0]]))
+        EIGEN_DEBUG_VAR2(vertex(e[1]).normalized().dot(normals[e[1]]))
         }
     }
     int i=0;
     for(auto&& n: normals) {
-        EIGEN_DEBUG_VAR(vertex(i).normalized().dot(n))
         n.normalize();
+        EIGEN_DEBUG_VAR2(vertex(i).normalized().dot(n))
     }
 
     return std::move(normals);
