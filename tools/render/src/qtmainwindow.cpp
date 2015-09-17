@@ -350,6 +350,7 @@ void MainWindow::openFile() {
 
 void MainWindow::keyPressEvent(QKeyEvent *event) {
 
+        std::cout << "Got a key even!" << std::endl;
     switch(event->key()){
     default:
         m_glwidget->keyPressEvent(event);

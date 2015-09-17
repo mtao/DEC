@@ -37,7 +37,7 @@ INCLUDE_DIRECTORIES(/usr/local/include/eigen3)
 
 ADD_DEFINITIONS(-std=c++11)
 ADD_DEFINITIONS(-Wall)
-ADD_DEFINITIONS(-Werror)
+#ADD_DEFINITIONS(-Werror)
 
 SET(DEC_SOURCES
     src/trianglemesh.cpp
@@ -76,6 +76,7 @@ ADD_LIBRARY(dec STATIC ${DEC_SOURCES} ${DEC_HEADERS})
 #SET (CMAKE_CXX_COMPILER             "/usr/bin/clang++")
 #SET (CMAKE_CXX_COMPILER             "/usr/bin/g++")
 INSTALL(FILES ${DEC_HEADERS} DESTINATION /usr/local/include/DEC)
+INSTALL(FILES ${PROJECT_BINARY_DIR}/libdec.a DESTINATION /usr/local/lib)
 
 
 ENABLE_TESTING()

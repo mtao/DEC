@@ -12,6 +12,7 @@
 #include <vector>
 #include "../include/conversion.h"
 #include <openvdb/math/Stencils.h>
+#include <openvdb/tools/VolumeToSpheres.h>
 
 
 typedef NormalTriangleMesh MeshType;
@@ -119,6 +120,27 @@ int main(int argc, char * argv[]) {
         v = v - vdb2eigen(vec);
 
     }
+
+
+    std::vector<openvdb::Vec3d> dvdbvertices(dual_vertices.size());
+    std::vector<float> dvdbdistances(dual_vertices.size());
+    std::transform(dual_vertices.begin(), dual_vertices.end(), dvdbvertices.begin(),[&](const Vector& v) -> openvdb::Vec3d {
+            return eigen2vdb(v);
+            });
+
+    openvdb::tools::ClosestSurfacePoint<openvdb::FloatGrid> cpts;
+    cpts.initialize(grid);
+    cpts.searchAndReplace(dvdbvertices,dvdbdistances);
+
+
+    std::transform(dvdbvertices.begin(), dvdbvertices.end(), dual_vertices.begin(),[&](const Vector& v) -> openvdb::Vec3d {
+            return eigen2vdb(v);
+            });
+
+
+
+
+
     for(auto&& v: vertices) {
         std::cout << "v " << v.transpose() << std::endl;
     }

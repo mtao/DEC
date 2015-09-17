@@ -43,7 +43,7 @@ void FluidWidget::show() {
 }
 
 FluidWidget::FluidWidget(QWidget * parent): MainWindow(parent){
-    //grabKeyboard();
+    grabKeyboard();
 }
 void FluidWidget::initializeMesh() {
     MainWindow::initializeMesh();
@@ -97,6 +97,7 @@ void FluidWidget::keyPressEvent(QKeyEvent * event) {
 
     switch(event->key()) {
     case Qt::Key_R:
+        step(0.02);
         break;
     case Qt::Key_T:
         step(0.02);

@@ -2,6 +2,7 @@
 #define _TRIANGLEMESH_H_
 
 #include "dec.hpp"
+#include <memory>
 /*! \brief Triangle mesh with normals*/
 
 class NormalTriangleMesh: public TriangleMeshf, public DEC<TriangleMeshf>
@@ -9,6 +10,7 @@ class NormalTriangleMesh: public TriangleMeshf, public DEC<TriangleMeshf>
 public:
     enum NormalType {Equal_Normal, Area_Normal, Angle_Normal, Mean_Curvature_Normal, Sphere_Normal};
     enum AdvectionType {Semilagrangian_Advection};
+    typedef std::shared_ptr<NormalTriangleMesh> Ptr;
     typedef TriangleMeshf SCParent;
     typedef DEC<TriangleMeshf> DECParent;
     typedef SCParent::NumTraits NumTraits;
